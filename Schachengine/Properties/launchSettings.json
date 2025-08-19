@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Schachengine": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}
