@@ -29,6 +29,7 @@ namespace Schachengine
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             pictureBox1 = new System.Windows.Forms.PictureBox();
             radioButton1 = new System.Windows.Forms.RadioButton();
@@ -72,6 +73,14 @@ namespace Schachengine
             button5 = new System.Windows.Forms.Button();
             richTextBox2 = new System.Windows.Forms.RichTextBox();
             textBox2 = new System.Windows.Forms.TextBox();
+            checkBox1 = new System.Windows.Forms.CheckBox();
+            timer1 = new System.Windows.Forms.Timer(components);
+            label29 = new System.Windows.Forms.Label();
+            label30 = new System.Windows.Forms.Label();
+            label31 = new System.Windows.Forms.Label();
+            label32 = new System.Windows.Forms.Label();
+            label33 = new System.Windows.Forms.Label();
+            button6 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
@@ -84,44 +93,43 @@ namespace Schachengine
             pictureBox1.TabStop = false;
             pictureBox1.Click += pictureBox1_Click;
             pictureBox1.Paint += pictureBox1_Paint;
+            pictureBox1.MouseClick += pictureBox1_MouseClick;
             // 
             // radioButton1
             // 
             radioButton1.AutoSize = true;
-            radioButton1.Location = new System.Drawing.Point(829, 28);
+            radioButton1.Location = new System.Drawing.Point(829, 87);
             radioButton1.Name = "radioButton1";
             radioButton1.Size = new System.Drawing.Size(69, 19);
             radioButton1.TabIndex = 1;
-            radioButton1.TabStop = true;
             radioButton1.Text = "Springer";
             radioButton1.UseVisualStyleBackColor = true;
             // 
             // radioButton2
             // 
             radioButton2.AutoSize = true;
-            radioButton2.Location = new System.Drawing.Point(829, 53);
+            radioButton2.Location = new System.Drawing.Point(829, 112);
             radioButton2.Name = "radioButton2";
             radioButton2.Size = new System.Drawing.Size(58, 19);
             radioButton2.TabIndex = 2;
-            radioButton2.TabStop = true;
             radioButton2.Text = "Läufer";
             radioButton2.UseVisualStyleBackColor = true;
             // 
             // radioButton3
             // 
             radioButton3.AutoSize = true;
-            radioButton3.Location = new System.Drawing.Point(829, 78);
+            radioButton3.Location = new System.Drawing.Point(829, 137);
             radioButton3.Name = "radioButton3";
             radioButton3.Size = new System.Drawing.Size(53, 19);
             radioButton3.TabIndex = 3;
-            radioButton3.TabStop = true;
             radioButton3.Text = "Turm";
             radioButton3.UseVisualStyleBackColor = true;
             // 
             // radioButton4
             // 
             radioButton4.AutoSize = true;
-            radioButton4.Location = new System.Drawing.Point(829, 103);
+            radioButton4.Checked = true;
+            radioButton4.Location = new System.Drawing.Point(829, 162);
             radioButton4.Name = "radioButton4";
             radioButton4.Size = new System.Drawing.Size(56, 19);
             radioButton4.TabIndex = 4;
@@ -133,11 +141,11 @@ namespace Schachengine
             // 
             label1.AutoSize = true;
             label1.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            label1.Location = new System.Drawing.Point(806, 9);
+            label1.Location = new System.Drawing.Point(806, 62);
             label1.Name = "label1";
-            label1.Size = new System.Drawing.Size(209, 21);
+            label1.Size = new System.Drawing.Size(114, 21);
             label1.TabIndex = 6;
-            label1.Text = "Umwandlung des Bauerns";
+            label1.Text = "Umwandlung";
             // 
             // button1
             // 
@@ -153,7 +161,7 @@ namespace Schachengine
             // 
             label2.AutoSize = true;
             label2.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
-            label2.Location = new System.Drawing.Point(806, 125);
+            label2.Location = new System.Drawing.Point(806, 184);
             label2.Name = "label2";
             label2.Size = new System.Drawing.Size(109, 21);
             label2.TabIndex = 8;
@@ -161,9 +169,9 @@ namespace Schachengine
             // 
             // richTextBox1
             // 
-            richTextBox1.Location = new System.Drawing.Point(815, 149);
+            richTextBox1.Location = new System.Drawing.Point(815, 208);
             richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new System.Drawing.Size(279, 651);
+            richTextBox1.Size = new System.Drawing.Size(279, 592);
             richTextBox1.TabIndex = 9;
             richTextBox1.Text = "";
             // 
@@ -463,12 +471,94 @@ namespace Schachengine
             textBox2.Size = new System.Drawing.Size(53, 23);
             textBox2.TabIndex = 42;
             // 
+            // checkBox1
+            // 
+            checkBox1.AutoSize = true;
+            checkBox1.Location = new System.Drawing.Point(997, 66);
+            checkBox1.Name = "checkBox1";
+            checkBox1.Size = new System.Drawing.Size(109, 19);
+            checkBox1.TabIndex = 43;
+            checkBox1.Text = "Brett umdrehen";
+            checkBox1.UseVisualStyleBackColor = true;
+            checkBox1.CheckedChanged += checkBox1_CheckedChanged;
+            // 
+            // timer1
+            // 
+            timer1.Tick += timer1_Tick;
+            // 
+            // label29
+            // 
+            label29.AutoSize = true;
+            label29.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            label29.Location = new System.Drawing.Point(806, 9);
+            label29.Name = "label29";
+            label29.Size = new System.Drawing.Size(44, 21);
+            label29.TabIndex = 44;
+            label29.Text = "Zeit:";
+            // 
+            // label30
+            // 
+            label30.AutoSize = true;
+            label30.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            label30.Location = new System.Drawing.Point(933, 9);
+            label30.Name = "label30";
+            label30.Size = new System.Drawing.Size(54, 21);
+            label30.TabIndex = 45;
+            label30.Text = "Weiß:";
+            // 
+            // label31
+            // 
+            label31.AutoSize = true;
+            label31.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            label31.Location = new System.Drawing.Point(1014, 9);
+            label31.Name = "label31";
+            label31.Size = new System.Drawing.Size(77, 21);
+            label31.TabIndex = 46;
+            label31.Text = "Schwarz:";
+            // 
+            // label32
+            // 
+            label32.AutoSize = true;
+            label32.Font = new System.Drawing.Font("Segoe UI", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+            label32.Location = new System.Drawing.Point(889, 30);
+            label32.Name = "label32";
+            label32.Size = new System.Drawing.Size(98, 32);
+            label32.TabIndex = 47;
+            label32.Text = "0:00:00";
+            // 
+            // label33
+            // 
+            label33.AutoSize = true;
+            label33.Font = new System.Drawing.Font("Segoe UI", 18F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+            label33.Location = new System.Drawing.Point(993, 30);
+            label33.Name = "label33";
+            label33.Size = new System.Drawing.Size(98, 32);
+            label33.TabIndex = 48;
+            label33.Text = "0:00:00";
+            // 
+            // button6
+            // 
+            button6.Location = new System.Drawing.Point(963, 846);
+            button6.Name = "button6";
+            button6.Size = new System.Drawing.Size(128, 23);
+            button6.TabIndex = 49;
+            button6.Text = "Match vs A.I.";
+            button6.UseVisualStyleBackColor = true;
+            button6.Click += button6_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             BackColor = System.Drawing.Color.Salmon;
             ClientSize = new System.Drawing.Size(1106, 961);
+            Controls.Add(button6);
+            Controls.Add(label33);
+            Controls.Add(label32);
+            Controls.Add(label31);
+            Controls.Add(label30);
+            Controls.Add(label29);
+            Controls.Add(checkBox1);
             Controls.Add(textBox2);
             Controls.Add(richTextBox2);
             Controls.Add(button5);
@@ -566,6 +656,14 @@ namespace Schachengine
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.RichTextBox richTextBox2;
         private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.Timer timer1;
+        private System.Windows.Forms.Label label29;
+        private System.Windows.Forms.Label label30;
+        private System.Windows.Forms.Label label31;
+        private System.Windows.Forms.Label label32;
+        private System.Windows.Forms.Label label33;
+        private System.Windows.Forms.Button button6;
     }
 }
 

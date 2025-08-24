@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
 
@@ -43,8 +44,8 @@ namespace Schachengine
                      -10,  0,  5, 10, 10,  5,  0,-10,
                      -10,  5,  5, 10, 10,  5,  5,-10,
                      -10,  0, 10, 10, 10, 10,  0,-10,
-                     -10, 10, 10, 10, 10, 10, 10,-10,
-                     -10,  5,  0,  0,  0,  0,  5,-10,
+                     -10,  5, 10,  5,  5, 10,  5,-10,
+                     -10, 10,  0,  0,  0,  0, 10,-10,
                      -20,-10,-10,-10,-10,-10,-10,-20,},
            //Turm
            new int[]{ 0,  0,  0,  0,  0,  0,  0,  0,
@@ -86,6 +87,7 @@ namespace Schachengine
         public Suche()
         {
             timer.Elapsed += new ElapsedEventHandler(timedEvent);
+            Berechne_Randabstand();
         }
         //Bewertungstabellen für
         public int Bewertung(int pyCount)
@@ -98,7 +100,7 @@ namespace Schachengine
             {
                 if (Figuren[i].Farbe == "Weiß")
                 {
-                    Typ = Figuren[i].Art - 8;
+                    Typ = Figuren[i].Art;
                     MaterialWeiß += Figuren[i].Wert;
                     //Kriterium Figurenaktivität
                     if (Typ == 6)
@@ -119,7 +121,7 @@ namespace Schachengine
                 }
                 else if (Figuren[i].Farbe == "Schwarz")
                 {
-                    Typ = Figuren[i].Art - 16;
+                    Typ = Figuren[i].Art - 6;
                     MaterialSchwarz += Figuren[i].Wert;
                     //Kriterium Figurenaktivität
                     if (Typ == 6)
@@ -145,7 +147,7 @@ namespace Schachengine
                 Endspiel = false;
 
             Bewertung = MaterialWeiß - MaterialSchwarz;
-            switch (WinChecker())
+            switch (WinChecker(true))
             {
                 case "1-0":
                     Bewertung = 100000 - pyCount;
@@ -159,7 +161,7 @@ namespace Schachengine
             }
             return Bewertung;
         }
-        public string WinChecker()
+        public string WinChecker(bool drawDoubleRepeat)
         {
             //Matt und Patt
             if (LegalMoveGenerator(false).Count == 0)
@@ -184,6 +186,51 @@ namespace Schachengine
             //Fünfzig-Züge-Regel
             if (fzregel >= 100)
                 return "1/2-1/2";
+            //Dreifache-Stellungswiederholung
+            int repCount = zobrist_history.Count(x => x == zobrist_key);
+            int drawCount = 2;
+            if (drawDoubleRepeat)
+                drawCount = 1;
+            if (repCount == drawCount)
+            {
+                return "1/2-1/2";
+            }
+            return "";
+        }
+        public string WinChecker(bool drawDoubleRepeat, List<Zug> legalMoves)
+        {
+            //Matt und Patt
+            if (legalMoves.Count == 0)
+            {
+                UpdateKingPos();
+                if (SquareInCheck(PosKönig))
+                {
+                    if (weißamzug)
+                    {
+                        return "0-1";
+                    }
+                    else
+                    {
+                        return "1-0";
+                    }
+                }
+                else
+                {
+                    return "1/2-1/2";
+                }
+            }
+            //Fünfzig-Züge-Regel
+            if (fzregel >= 100)
+                return "1/2-1/2";
+            //Dreifache-Stellungswiederholung
+            int repCount = zobrist_history.Count(x => x == zobrist_key);
+            int drawCount = 2;
+            if (drawDoubleRepeat)
+                drawCount = 1;
+            if (repCount == drawCount)
+            {
+                return "1/2-1/2";
+            }
             return "";
         }
         public int Quiesce(int tiefe, int spieler, int alpha, int beta)
@@ -195,6 +242,13 @@ namespace Schachengine
                 return max;
             if (max >= alpha)
                 alpha = max;
+            // delta pruning
+            if (!Endspiel)
+            {
+                int delta = 1000;
+                if (max < alpha - delta)
+                    return alpha;
+            }
 
             int wert;
             List<Zug> Captures = LegalMoveGenerator(true);
@@ -213,11 +267,13 @@ namespace Schachengine
             }
             return max;
         }
+
+        //Alpha-Beta failsoft
         public int NegaMax(int tiefe, int spieler, int alpha, int beta)
         {
             if (zSekunden >= maxZeit && Suchtiefe > 1) return -1; 
             legalMoves = LegalMoveGenerator(false);
-            if ((tiefe == Suchtiefe) || (legalMoves.Count == 0)) return Quiesce(tiefe, spieler, alpha, beta);
+            if ((tiefe == Suchtiefe) || (WinChecker(true, legalMoves) != "")) return Quiesce(tiefe, spieler, alpha, beta);
             int max = int.MinValue + 2;
             foreach (Zug move in legalMoves)
             {
@@ -240,44 +296,49 @@ namespace Schachengine
             }
             return max;
         }
-        public Zug PlayMove()
+        public async Task<Zug> PlayMove(int thinkTime)
         {
-            gespeicherterZug = default;
-            zSekunden = 0;
-            maxZeit = 20;
-            timer.Start();
-
-            Zug besterZug = default;
-            int besterWert = 0;
-
-            // Iterative Deepening
-            for (Suchtiefe = 1; Suchtiefe <= 10; Suchtiefe++) // 10 nur als Maximalgrenze
+            return await Task.Run(() =>
             {
-                if (weißamzug)
+                gespeicherterZug = default;
+                zSekunden = 0;
+                maxZeit = thinkTime;
+                timer.Start();
+
+                Zug besterZug = default;
+                int besterWert = 0;
+
+                // Iterative Deepening
+                for (Suchtiefe = 1; Suchtiefe <= 20; Suchtiefe++) // 20 nur als Maximalgrenze
                 {
-                    besterWert = NegaMax(0, 1, int.MinValue + 2, int.MaxValue - 2);
-                }
-                else
-                {
-                    besterWert = -NegaMax(0, -1, int.MinValue + 2, int.MaxValue - 2);
-                }
-                // Zeitkontrolle: abbrechen, falls maxZeit überschritten
-                if (Suchtiefe == 1)
-                {
+                    if (weißamzug)
+                    {
+                        besterWert = NegaMax(0, 1, int.MinValue + 2, int.MaxValue - 2);
+                    }
+                    else
+                    {
+                        besterWert = -NegaMax(0, -1, int.MinValue + 2, int.MaxValue - 2);
+                    }
+                    // Zeitkontrolle: abbrechen, falls maxZeit überschritten
+                    if (Suchtiefe == 1)
+                    {
+                        besterZug = gespeicherterZug;
+                        Evalve = besterWert;
+                    }
+                    if (zSekunden >= maxZeit)
+                    {
+                        Suchtiefe--;
+                        break;
+                    }
                     besterZug = gespeicherterZug;
+                    pvHash = zobrist_key;
+                    pvMove = besterZug;
                     Evalve = besterWert;
                 }
-                if (zSekunden >= maxZeit)
-                {
-                    Suchtiefe--;
-                    break;
-                }
-                besterZug = gespeicherterZug;
-                Evalve = besterWert;
-            }
 
-            timer.Stop();
-            return besterZug;
+                timer.Stop();
+                return besterZug;
+            });
         }
         private void timedEvent(object source, System.Timers.ElapsedEventArgs e)
         {

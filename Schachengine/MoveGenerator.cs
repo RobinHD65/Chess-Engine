@@ -11,6 +11,8 @@ namespace Schachengine
     {
         public System.Timers.Timer timer = new(100);
         public int zSekunden;
+        public ulong pvHash;
+        public Zug pvMove;
         public UInt64 Perft(int tiefe)
         {
             UInt64 n = 0;      
@@ -26,31 +28,21 @@ namespace Schachengine
             return n;
             
         }
-        public bool SquareInCheck(int Feld)
-        {
-            weißamzug = !weißamzug;
-            List<Zug> Gegnerzüge = GenerateMoves(false, false);
-            if (Gegnerzüge.Any(zug => zug.Zielfeld == Feld))
-            {
-                weißamzug = !weißamzug;
-                return true;
-            }
-            else
-            {
-                weißamzug = !weißamzug;
-                return false;
-            }
-        }
         public List<Zug> LegalMoveGenerator(bool onlyTakes)
         {
             List<Zug> pseudolegal = GenerateMoves(true, onlyTakes);
             List<Zug> legaleZüge = new();
+            if (zobrist_key == pvHash) 
+            {
+                pvMove.GuessedScore = 10000;
+            }
             for (int i = 0; i < pseudolegal.Count; i++)
             {
                 Zug zug = pseudolegal[i];
                 MakeMove(zug);
-                List<Zug> GegnerZüge = GenerateMoves(false, onlyTakes);
-                if (!GegnerZüge.Any(response => response.Zielfeld == PosKönig))
+                weißamzug = !weißamzug;
+                UpdateKingPos();
+                if (!SquareInCheck(PosKönig))
                 {
                     if (Figuren[zug.Zielfeld].Farbe != "leer")
                     {
@@ -58,6 +50,7 @@ namespace Schachengine
                     }
                     legaleZüge.Add(zug);
                 }
+                weißamzug = !weißamzug;
                 UnmakeMove();
             }
             legaleZüge.OrderByDescending(z => z.GuessedScore);
@@ -68,7 +61,7 @@ namespace Schachengine
             List<Zug> moves = new List<Zug>();
             for (int i = 0; i <= 63; i++)
             {
-                if ((Figuren[i].Farbe == "Weiß" && weißamzug) | (Figuren[i].Farbe == "Schwarz" && !weißamzug))
+                if ((Figuren[i].Farbe == "Weiß" && weißamzug) || (Figuren[i].Farbe == "Schwarz" && !weißamzug))
                 {
                     switch (Figuren[i].Type)
                     {
@@ -428,33 +421,46 @@ namespace Schachengine
             {
                 if (weißamzug)
                 {
-                    if (Rochaderechte[0] && (Figuren[5].Art == 0) && (Figuren[6].Art == 0) && !SquareInCheck(5) && !SquareInCheck(4))
+                    if (hasCastlingRight(0) && (Figuren[5].Art == 0) && (Figuren[6].Art == 0))
                     {
-                        Zug move = new Zug(Feld, Feld + 2);
-                        move.moveType = MoveType.RochadeKS;
-                        moves.Add(move);
+                        if (!SquareInCheck(5) && !SquareInCheck(4))
+                        {
+                            Zug move = new Zug(Feld, Feld + 2);
+                            move.moveType = MoveType.RochadeKS;
+                            moves.Add(move);
+                        }
                     }
-                    if (Rochaderechte[1] && (Figuren[1].Art == 0) && (Figuren[2].Art == 0) && (Figuren[3].Art == 0) && !SquareInCheck(3) && !SquareInCheck(4))
+                    if (hasCastlingRight(1) && (Figuren[1].Art == 0) && (Figuren[2].Art == 0) && (Figuren[3].Art == 0))
                     {
-                        Zug move = new Zug(Feld, Feld - 2);
-                        move.moveType = MoveType.RochadeQS;
-                        moves.Add(move);
+                        if (!SquareInCheck(3) && !SquareInCheck(4))
+                        {
+                            Zug move = new Zug(Feld, Feld - 2);
+                            move.moveType = MoveType.RochadeQS;
+                            moves.Add(move);
+                        }
                     }                      
                 }
                 else
                 //Rochaden Schwarz
                 {
-                    if (Rochaderechte[2] && (Figuren[61].Art == 0) && (Figuren[62].Art == 0) && !SquareInCheck(61) && !SquareInCheck(60))
+                    if (hasCastlingRight(2) && (Figuren[61].Art == 0) && (Figuren[62].Art == 0))
                     {
-                        Zug move = new Zug(Feld, Feld + 2);
-                        move.moveType = MoveType.RochadeKS;
-                        moves.Add(move);
+                        if (!SquareInCheck(61) && !SquareInCheck(60))
+                        {
+                            Zug move = new Zug(Feld, Feld + 2);
+                            move.moveType = MoveType.RochadeKS;
+                            moves.Add(move);
+                        }
                     }
-                    if (Rochaderechte[3] && (Figuren[57].Art == 0) && (Figuren[58].Art == 0) && (Figuren[59].Art == 0) && !SquareInCheck(59) && !SquareInCheck(60))
+                    if (hasCastlingRight(3) && (Figuren[57].Art == 0) && (Figuren[58].Art == 0) && (Figuren[59].Art == 0))
                     {
-                        Zug move = new Zug(Feld, Feld - 2);
-                        move.moveType = MoveType.RochadeQS;
-                        moves.Add(move);
+                        if (!SquareInCheck(59) && !SquareInCheck(60))
+                        {
+                            Zug move = new Zug(Feld, Feld - 2);
+                            move.moveType = MoveType.RochadeQS;
+                            moves.Add(move);
+                        }
+                        
                     }
                 }
             }
