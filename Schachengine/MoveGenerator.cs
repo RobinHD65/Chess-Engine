@@ -15,26 +15,28 @@ namespace Schachengine
         public Zug pvMove;
         public UInt64 Perft(int tiefe)
         {
-            UInt64 n = 0;      
+            UInt64 n = 0;
             List<Zug> legalmoves = LegalMoveGenerator(false);
             if (tiefe == 0)
                 return (ulong)legalmoves.Count;
             foreach (Zug move in legalmoves)
-            { 
-                    MakeMove(move);
-                    n += Perft(tiefe - 1);
-                    UnmakeMove();
+            {
+                MakeMove(move);
+                n += Perft(tiefe - 1);
+                UnmakeMove();
             }
             return n;
-            
+
         }
         public List<Zug> LegalMoveGenerator(bool onlyTakes)
         {
             List<Zug> pseudolegal = GenerateMoves(true, onlyTakes);
             List<Zug> legaleZüge = new();
-            if (zobrist_key == pvHash) 
+            if (zobrist_key == pvHash)
             {
                 pvMove.GuessedScore = 10000;
+                pseudolegal.Remove(new Zug(pvMove.Startfeld, pvMove.Zielfeld));
+                legaleZüge.Add(pvMove);
             }
             for (int i = 0; i < pseudolegal.Count; i++)
             {
@@ -52,6 +54,19 @@ namespace Schachengine
                 }
                 weißamzug = !weißamzug;
                 UnmakeMove();
+            }
+            if (zobrist_key == pvHash)
+            {
+                for (int i = 0; i < legaleZüge.Count; i++)
+                {
+                    if (legaleZüge[i].Startfeld == pvMove.Startfeld && legaleZüge[i].Zielfeld == pvMove.Zielfeld)
+                    {
+                        Zug temp = legaleZüge[i];
+                        temp.GuessedScore = 10000;
+                        legaleZüge[i] = temp;
+                        break;
+                    }
+                }
             }
             legaleZüge.OrderByDescending(z => z.GuessedScore);
             return legaleZüge;
@@ -438,7 +453,7 @@ namespace Schachengine
                             move.moveType = MoveType.RochadeQS;
                             moves.Add(move);
                         }
-                    }                      
+                    }
                 }
                 else
                 //Rochaden Schwarz
@@ -460,7 +475,7 @@ namespace Schachengine
                             move.moveType = MoveType.RochadeQS;
                             moves.Add(move);
                         }
-                        
+
                     }
                 }
             }

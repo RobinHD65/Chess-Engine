@@ -7,6 +7,13 @@ using System.Windows.Forms;
 
 namespace Schachengine
 {
+    public enum WriteRowOrColumn
+    {
+        None,
+        Row,
+        Column,
+        Both
+    }
     static class PGN
     {
         public static string TypeToString(int type)
@@ -29,79 +36,91 @@ namespace Schachengine
                     return "";
             }
         }
+        public static string AddMove(Zug zug, int i)
+        {
+            string pgn = "";
+            bool isCapture = false;
+            switch (zug.moveType)
+            {
+                case MoveType.RochadeKS:
+                    if (i % 2 == 0)
+                    {
+                        pgn += (1 + i / 2).ToString() + ". ";
+                    }
+                    pgn += "O-O ";
+                    if (i % 2 == 1)
+                    {
+                        pgn += "\n";
+                    }
+                    i++;
+                    return pgn;
+                case MoveType.RochadeQS:
+                    if (i % 2 == 0)
+                    {
+                        pgn += (1 + i / 2).ToString() + ". ";
+                    }
+                    pgn += "O-O-O ";
+                    if (i % 2 == 1)
+                    {
+                        pgn += "\n";
+                    }
+                    i++;
+                    return pgn;
+                case MoveType.Enpassant:
+                    isCapture = true;
+                    break;
+
+            }
+            if (Brett.history[i].Figuren[zug.Zielfeld].Type != 0)
+            {
+                isCapture = true;
+            }
+            if (i % 2 == 0)
+            {
+                pgn += (1 + i / 2).ToString() + ". ";
+            }
+            string movedPiece = TypeToString(Brett.history[i].Figuren[zug.Startfeld].Type);
+            pgn += movedPiece;
+            // Schreibe Ausgangsfeld
+            if (movedPiece != "") pgn += IndexToSquare(zug.Startfeld);
+            if (isCapture)
+            {
+                if (movedPiece == "") // wenn Bauer schlägt
+                {
+                    pgn += IndexToSquare(zug.Startfeld)[0];
+                }
+                pgn += "x";
+            } else
+            {
+                if (movedPiece != "") pgn += "-";
+            }
+            pgn += IndexToSquare(zug.Zielfeld);
+            //Bauerumwandlung
+            if (zug.Promotion != 0)
+            {
+                pgn += TypeToString(zug.Promotion + 1);
+            }
+            //Mach ein Plus wenn Schach
+            if (isCheck(Brett.history[i], zug, movedPiece, i))
+            {
+                pgn += "+";
+            }
+            pgn += " ";
+            //Zeilenumbruch nach jedem zweiten Zug
+            if (i % 2 == 1)
+            {
+                pgn += "\n";
+            }
+            i++;
+            return pgn;
+        }
         public static string ToPGN(List<Zug> moves)
         {
             int i = 0;
             string pgn = "";
             foreach (Zug zug in moves)
             {
-                bool isCapture = false;
-                switch(zug.moveType)
-                {
-                    case MoveType.RochadeKS:
-                        if (i % 2 == 0)
-                        {
-                            pgn += (1 + i / 2).ToString() + ". ";
-                        }
-                        pgn += "O-O ";
-                        if (i % 2 == 1)
-                        {
-                            pgn += "\n";
-                        }
-                        i++;
-                        continue;
-                    case MoveType.RochadeQS:
-                        if (i % 2 == 0)
-                        {
-                            pgn += (1 + i / 2).ToString() + ". ";
-                        }
-                        pgn += "O-O-O ";
-                        if (i % 2 == 1)
-                        {
-                            pgn += "\n";
-                        }
-                        i++;
-                        continue;
-                    case MoveType.Enpassant:
-                        isCapture = true;
-                        break;
-
-                }
-                if (Brett.history[i].Figuren[zug.Zielfeld].Type != 0)
-                {
-                    isCapture = true;
-                }
-                if (i % 2 == 0)
-                {
-                    pgn += (1 + i / 2).ToString() + ". ";
-                }
-                string movedPiece = TypeToString(Brett.history[i].Figuren[zug.Startfeld].Type);
-                pgn += movedPiece;
-                if (isCapture)
-                {
-                    if (movedPiece == "") // wenn Bauer schlägt
-                    {
-                        pgn += IndexToSquare(zug.Startfeld)[0];
-                    }
-                    pgn += "x";
-                }
-                pgn += IndexToSquare(zug.Zielfeld);
-                //Bauerumwandlung
-                if (zug.Promotion != 0)
-                {
-                    pgn += TypeToString(zug.Promotion + 1);
-                }
-                //Mach ein Plus wenn Schach
-                if (isCheck(Brett.history[i], zug, movedPiece, i))
-                {
-                    pgn += "+";
-                }
-                pgn += " ";
-                //Zeilenumbruch nach jedem zweiten Zug
-                if (i % 2 == 1)
-                {
-                    pgn += "\n";
-                }
+                pgn += AddMove(zug, i);
                 i++;
             }
             return pgn;

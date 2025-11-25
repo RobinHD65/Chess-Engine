@@ -270,6 +270,7 @@ namespace Schachengine
                     blackKingPos = zug.Zielfeld;
             }
             UpdateKingPos();
+            zobrist_key ^= Zobrist.sideToMove;
             weißamzug = !weißamzug; // Zugwechsel
         }
         public void UnmakeMove()
