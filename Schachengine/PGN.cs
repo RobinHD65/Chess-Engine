@@ -7,13 +7,7 @@ using System.Windows.Forms;
 
 namespace Schachengine
 {
-    public enum WriteRowOrColumn
-    {
-        None,
-        Row,
-        Column,
-        Both
-    }
+
     static class PGN
     {
         public static string TypeToString(int type)
@@ -39,7 +33,6 @@ namespace Schachengine
         public static string AddMove(Zug zug, int i)
         {
             string pgn = "";
-            bool isCapture = false;
             switch (zug.moveType)
             {
                 case MoveType.RochadeKS:
@@ -67,43 +60,19 @@ namespace Schachengine
                     i++;
                     return pgn;
                 case MoveType.Enpassant:
-                    isCapture = true;
                     break;
 
-            }
-            if (Brett.history[i].Figuren[zug.Zielfeld].Type != 0)
-            {
-                isCapture = true;
             }
             if (i % 2 == 0)
             {
                 pgn += (1 + i / 2).ToString() + ". ";
             }
-            string movedPiece = TypeToString(Brett.history[i].Figuren[zug.Startfeld].Type);
-            pgn += movedPiece;
             // Schreibe Ausgangsfeld
-            if (movedPiece != "") pgn += IndexToSquare(zug.Startfeld);
-            if (isCapture)
-            {
-                if (movedPiece == "") // wenn Bauer schlägt
-                {
-                    pgn += IndexToSquare(zug.Startfeld)[0];
-                }
-                pgn += "x";
-            } else
-            {
-                if (movedPiece != "") pgn += "-";
-            }
-            pgn += IndexToSquare(zug.Zielfeld);
+            pgn += IndexToSquare(zug.Startfeld) + "-" + IndexToSquare(zug.Zielfeld);
             //Bauerumwandlung
             if (zug.Promotion != 0)
             {
                 pgn += TypeToString(zug.Promotion + 1);
-            }
-            //Mach ein Plus wenn Schach
-            if (isCheck(Brett.history[i], zug, movedPiece, i))
-            {
-                pgn += "+";
             }
             pgn += " ";
             //Zeilenumbruch nach jedem zweiten Zug
@@ -125,20 +94,7 @@ namespace Schachengine
             }
             return pgn;
         }
-        public static bool isCheck(Brett brett, Zug zug, string movedPiece, int i) 
-        {
-            Brett tempBrett = brett.Copy();
-            tempBrett.MakeMove(zug);
-            tempBrett.weißamzug = i % 2 == 1;
-            tempBrett.UpdateKingPos();
-            if (tempBrett.SquareInCheck(tempBrett.PosKönig))
-            {
-                tempBrett.UnmakeMove();
-                return true;
-            }
-            tempBrett.UnmakeMove();
-            return false;
-        }
+
         public static int SquareToIndex(string Square)
         {
             int Index = 0;

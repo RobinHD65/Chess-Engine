@@ -10,6 +10,7 @@ namespace Schachengine
     class MoveGenerator : Brett
     {
         public System.Timers.Timer timer = new(100);
+        List<Zug> pseudolegal = new List<Zug>();
         public int zSekunden;
         public ulong pvHash;
         public Zug pvMove;
@@ -30,23 +31,25 @@ namespace Schachengine
         }
         public List<Zug> LegalMoveGenerator(bool onlyTakes)
         {
-            List<Zug> pseudolegal = GenerateMoves(true, onlyTakes);
+            
+            GenerateMoves(true, onlyTakes);
             List<Zug> legaleZüge = new();
             if (zobrist_key == pvHash)
             {
                 pvMove.GuessedScore = 10000;
-                pseudolegal.Remove(new Zug(pvMove.Startfeld, pvMove.Zielfeld));
+                int idx = pseudolegal.FindIndex(z => z.Startfeld == pvMove.Startfeld && z.Zielfeld == pvMove.Zielfeld); 
+                if (idx >= 0) pseudolegal.RemoveAt(idx);
                 legaleZüge.Add(pvMove);
             }
             for (int i = 0; i < pseudolegal.Count; i++)
             {
-                Zug zug = pseudolegal[i];
+                Zug zug = pseudolegal[i];     
                 MakeMove(zug);
                 weißamzug = !weißamzug;
                 UpdateKingPos();
                 if (!SquareInCheck(PosKönig))
                 {
-                    if (Figuren[zug.Zielfeld].Farbe != "leer")
+                    if (Figuren[zug.Zielfeld].Farbe != Farbe.leer)
                     {
                         zug.GuessedScore = Figuren[zug.Zielfeld].Wert - Figuren[zug.Startfeld].Wert;
                     }
@@ -54,6 +57,8 @@ namespace Schachengine
                 }
                 weißamzug = !weißamzug;
                 UnmakeMove();
+                
+            
             }
             if (zobrist_key == pvHash)
             {
@@ -68,47 +73,45 @@ namespace Schachengine
                     }
                 }
             }
-            legaleZüge.OrderByDescending(z => z.GuessedScore);
+            legaleZüge.Sort((a, b) => b.GuessedScore.CompareTo(a.GuessedScore));
             return legaleZüge;
         }
         public List<Zug> GenerateMoves(bool CheckCastles, bool onlyTakes)
         {
-            List<Zug> moves = new List<Zug>();
+            pseudolegal.Clear();
             for (int i = 0; i <= 63; i++)
             {
-                if ((Figuren[i].Farbe == "Weiß" && weißamzug) || (Figuren[i].Farbe == "Schwarz" && !weißamzug))
+                if ((Figuren[i].Farbe == Farbe.Weiß && weißamzug) || (Figuren[i].Farbe == Farbe.Schwarz && !weißamzug))
                 {
                     switch (Figuren[i].Type)
                     {
                         case 1: //Bauern
-                            moves.AddRange(GeneratePawnMoves(i, onlyTakes));
+                            GeneratePawnMoves(i, onlyTakes);
                             break;
                         case 2: //Springer
-                            moves.AddRange(GenerateKnightMoves(i, onlyTakes));
+                            GenerateKnightMoves(i, onlyTakes);
                             break;
                         case 3: //Läufer
-                            moves.AddRange(GenerateBishopMoves(i, onlyTakes));
+                            GenerateBishopMoves(i, onlyTakes);
                             break;
                         case 4: //Turm
-                            moves.AddRange(GenerateRookMoves(i, onlyTakes));
+                            GenerateRookMoves(i, onlyTakes);
                             break;
                         case 5: //Dame
-                            moves.AddRange(GenerateBishopMoves(i, onlyTakes));
-                            moves.AddRange(GenerateRookMoves(i, onlyTakes));
+                            GenerateBishopMoves(i, onlyTakes);
+                            GenerateRookMoves(i, onlyTakes);
                             break;
                         case 6: //König
-                            moves.AddRange(GenerateKingMoves(i, CheckCastles, onlyTakes));
+                            GenerateKingMoves(i, CheckCastles, onlyTakes);
                             break;
 
                     }
                 }
             }
-            return moves;
+            return pseudolegal;
         }
-        public List<Zug> GenerateBishopMoves(int Feld, bool onlyTakes)
-        {
-            List<Zug> moves = new List<Zug>();
-            int[] Offsets = { -9, -7, 7, 9 };
+        public void GenerateBishopMoves(int Feld, bool onlyTakes)
+        {  
             int[] Abstände = {
                 Math.Min(AbstandSüd[Feld], AbstandWest[Feld]),
                 Math.Min(AbstandSüd[Feld], AbstandOst[Feld]),
@@ -119,7 +122,7 @@ namespace Schachengine
             {
                 for (int j = 1; j <= Abstände[i]; j++)
                 {
-                    int dest = Feld + j * Offsets[i];
+                    int dest = Feld + j * diagonalOffsets[i];
                     // Wenn eigene Figur auf dem Zielfeld -> nicht hinzufügen und abbrechen
                     if (Figuren[dest].Farbe == Figuren[Feld].Farbe)
                     {
@@ -127,49 +130,44 @@ namespace Schachengine
                     }
                     // ansonsten Zug hinzufügen
 
-                    if (!onlyTakes) moves.Add(new Zug(Feld, dest));
+                    if (!onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                     // Wenn ein Gegner auf dem Feld steht (nicht leer) -> abbrechen (Schlagzug)
                     if (Figuren[dest].Art != 0)
                     {
-                        if (onlyTakes) moves.Add(new Zug(Feld, dest));
+                        if (onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                         break;
                     }
 
                 }
             }
-            return moves;
         }
-        public List<Zug> GenerateRookMoves(int Feld, bool onlyTakes)
-        {
-            List<Zug> moves = new List<Zug>();
-            int[] Offsets = { 8, 1, -8, -1 };
-            int[] Abstände = { AbstandNord[Feld], AbstandOst[Feld], AbstandSüd[Feld], AbstandWest[Feld] };
+        public void GenerateRookMoves(int Feld, bool onlyTakes)
+        { 
+            int[] Abstände = { AbstandSüd[Feld], AbstandWest[Feld], AbstandOst[Feld], AbstandNord[Feld] };
             for (int i = 0; i <= 3; i++)
             {
                 for (int j = 1; j <= Abstände[i]; j++)
                 {
-                    int dest = Feld + j * Offsets[i];
+                    int dest = Feld + j * horivertiOffsets[i];
                     if (Figuren[dest].Farbe == Figuren[Feld].Farbe)
                     {
                         break;
                     }
-                    if (!onlyTakes) moves.Add(new Zug(Feld, dest));
+                    if (!onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                     if (Figuren[dest].Art != 0)
                     {
-                        if (onlyTakes) moves.Add(new Zug(Feld, dest));
+                        if (onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                         break;
                     }
                 }
             }
-            return moves;
         }
-        public List<Zug> GeneratePawnMoves(int Feld, bool onlyTakes)
+        public void GeneratePawnMoves(int Feld, bool onlyTakes)
         {
-            List<Zug> moves = new List<Zug>();
             //Weiße Bauern
-            if (Figuren[Feld].Farbe == "Weiß")
+            if (Figuren[Feld].Farbe == Farbe.Weiß)
             {
-                if (Figuren[Feld + 8].Farbe == "leer")
+                if (Figuren[Feld + 8].Farbe == Farbe.leer)
                 {
                     if (Feld / 8 == 6)
                     {
@@ -177,27 +175,27 @@ namespace Schachengine
                         {
                             Zug move = new Zug(Feld, Feld + 8);
                             move.Promotion = i;
-                            if (!onlyTakes) moves.Add(move);
+                            if (!onlyTakes) pseudolegal.Add(move);
                         }
                     }
                     else
                     {
-                        if (!onlyTakes) moves.Add(new Zug(Feld, Feld + 8));
+                        if (!onlyTakes) pseudolegal.Add(new Zug(Feld, Feld + 8));
                     }
                     if (Feld / 8 == 1)
                     {
-                        if (Figuren[Feld + 16].Farbe == "leer")
+                        if (Figuren[Feld + 16].Farbe == Farbe.leer)
                         {
                             Zug move = new Zug(Feld, Feld + 16);
                             move.moveType = MoveType.BauerDoppelzug;
-                            if (!onlyTakes) moves.Add(move);
+                            if (!onlyTakes) pseudolegal.Add(move);
                         }
                     }
                 }
                 //Schlagzüge
                 if (AbstandWest[Feld] > 0)
                 {
-                    if (Figuren[Feld + 7].Farbe == "Schwarz")
+                    if (Figuren[Feld + 7].Farbe == Farbe.Schwarz)
                     {
                         if (Feld / 8 == 6)
                         {
@@ -205,18 +203,18 @@ namespace Schachengine
                             {
                                 Zug move = new Zug(Feld, Feld + 7);
                                 move.Promotion = i;
-                                moves.Add(move);
+                                pseudolegal.Add(move);
                             }
                         }
                         else
                         {
-                            moves.Add(new Zug(Feld, Feld + 7));
+                            pseudolegal.Add(new Zug(Feld, Feld + 7));
                         }
                     }
                 }
                 if (AbstandOst[Feld] > 0)
                 {
-                    if (Figuren[Feld + 9].Farbe == "Schwarz")
+                    if (Figuren[Feld + 9].Farbe == Farbe.Schwarz)
                     {
                         if (Feld / 8 == 6)
                         {
@@ -224,12 +222,12 @@ namespace Schachengine
                             {
                                 Zug move = new Zug(Feld, Feld + 9);
                                 move.Promotion = i;
-                                moves.Add(move);
+                                pseudolegal.Add(move);
                             }
                         }
                         else
                         {
-                            moves.Add(new Zug(Feld, Feld + 9));
+                            pseudolegal.Add(new Zug(Feld, Feld + 9));
                         }
                     }
                 }
@@ -240,7 +238,7 @@ namespace Schachengine
                     {
                         Zug move = new Zug(Feld, Feld + 7);
                         move.moveType = MoveType.Enpassant;
-                        moves.Add(move);
+                        pseudolegal.Add(move);
                     }
                 }
                 if (AbstandOst[Feld] > 0)
@@ -249,15 +247,15 @@ namespace Schachengine
                     {
                         Zug move = new Zug(Feld, Feld + 9);
                         move.moveType = MoveType.Enpassant;
-                        moves.Add(move);
-                    }
+                        pseudolegal.Add(move);
+                    }   
                 }
 
             }
             else
             //Schwarze Bauern
             {
-                if (Figuren[Feld - 8].Farbe == "leer")
+                if (Figuren[Feld - 8].Farbe == Farbe.leer)
                 {
                     if (Feld / 8 == 1)
                     {
@@ -265,27 +263,27 @@ namespace Schachengine
                         {
                             Zug move = new Zug(Feld, Feld - 8);
                             move.Promotion = i;
-                            if (!onlyTakes) moves.Add(move);
+                            if (!onlyTakes) pseudolegal.Add(move);
                         }
                     }
                     else
                     {
-                        if (!onlyTakes) moves.Add(new Zug(Feld, Feld - 8));
+                        if (!onlyTakes) pseudolegal.Add(new Zug(Feld, Feld - 8));
                     }
                     if (Feld / 8 == 6)
                     {
-                        if ((Feld / 8 == 6) && (Figuren[Feld - 16].Farbe == "leer"))
+                        if ((Feld / 8 == 6) && (Figuren[Feld - 16].Farbe == Farbe.leer))
                         {
                             Zug move = new Zug(Feld, Feld - 16);
                             move.moveType = MoveType.BauerDoppelzug;
-                            if (!onlyTakes) moves.Add(move);
+                            if (!onlyTakes) pseudolegal.Add(move);
                         }
                     }
                 }
                 //Schlagzüge
                 if (AbstandWest[Feld] > 0)
                 {
-                    if (Figuren[Feld - 9].Farbe == "Weiß")
+                    if (Figuren[Feld - 9].Farbe == Farbe.Weiß)
                     {
                         if (Feld / 8 == 1)
                         {
@@ -293,18 +291,18 @@ namespace Schachengine
                             {
                                 Zug move = new Zug(Feld, Feld - 9);
                                 move.Promotion = i;
-                                moves.Add(move);
+                                pseudolegal.Add(move);
                             }
                         }
                         else
                         {
-                            moves.Add(new Zug(Feld, Feld - 9));
+                            pseudolegal.Add(new Zug(Feld, Feld - 9));
                         }
                     }
                 }
                 if (AbstandOst[Feld] > 0)
                 {
-                    if (Figuren[Feld - 7].Farbe == "Weiß")
+                    if (Figuren[Feld - 7].Farbe == Farbe.Weiß)
                     {
                         if (Feld / 8 == 1)
                         {
@@ -312,12 +310,12 @@ namespace Schachengine
                             {
                                 Zug move = new Zug(Feld, Feld - 7);
                                 move.Promotion = i;
-                                moves.Add(move);
+                                pseudolegal.Add(move);
                             }
                         }
                         else
                         {
-                            moves.Add(new Zug(Feld, Feld - 7));
+                            pseudolegal.Add(new Zug(Feld, Feld - 7));
                         }
                     }
                 }
@@ -328,7 +326,7 @@ namespace Schachengine
                     {
                         Zug move = new Zug(Feld, Feld - 7);
                         move.moveType = MoveType.Enpassant;
-                        moves.Add(move);
+                        pseudolegal.Add(move);
 
                     }
                 }
@@ -338,20 +336,18 @@ namespace Schachengine
                     {
                         Zug move = new Zug(Feld, Feld - 9);
                         move.moveType = MoveType.Enpassant;
-                        moves.Add(move);
+                        pseudolegal.Add(move);
                     }
                 }
             }
-            return moves;
         }
-        public List<Zug> GenerateKnightMoves(int Feld, bool onlyTakes)
+        public void GenerateKnightMoves(int Feld, bool onlyTakes)
         {
-            List<Zug> moves = new List<Zug>();
             if ((AbstandNord[Feld] >= 2) && (AbstandOst[Feld] >= 1))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld + 17].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld + 17].Farbe != "leer") moves.Add(new Zug(Feld, Feld + 17));
+                    if (!onlyTakes || Figuren[Feld + 17].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld + 17));
                 }
             }
 
@@ -359,57 +355,54 @@ namespace Schachengine
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld + 10].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld + 10].Farbe != "leer") moves.Add(new Zug(Feld, Feld + 10));
+                    if (!onlyTakes || Figuren[Feld + 10].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld + 10));
                 }
             }
             if ((AbstandSüd[Feld] >= 1) && (AbstandOst[Feld] >= 2))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld - 6].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld - 6].Farbe != "leer") moves.Add(new Zug(Feld, Feld - 6));
+                    if (!onlyTakes || Figuren[Feld - 6].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld - 6));
                 }
             }
             if ((AbstandSüd[Feld] >= 2) && (AbstandOst[Feld] >= 1))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld - 15].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld - 15].Farbe != "leer") moves.Add(new Zug(Feld, Feld - 15));
+                    if (!onlyTakes || Figuren[Feld - 15].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld - 15));
                 }
             }
             if ((AbstandSüd[Feld] >= 2) && (AbstandWest[Feld] >= 1))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld - 17].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld - 17].Farbe != "leer") moves.Add(new Zug(Feld, Feld - 17));
+                    if (!onlyTakes || Figuren[Feld - 17].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld - 17));
                 }
             }
             if ((AbstandSüd[Feld] >= 1) && (AbstandWest[Feld] >= 2))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld - 10].Farbe)
-                {
-                    if (!onlyTakes || Figuren[Feld - 10].Farbe != "leer") moves.Add(new Zug(Feld, Feld - 10));
+                {   
+                    if (!onlyTakes || Figuren[Feld - 10].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld - 10));
                 }
             }
             if ((AbstandNord[Feld] >= 2) && (AbstandWest[Feld] >= 1))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld + 15].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld + 15].Farbe != "leer") moves.Add(new Zug(Feld, Feld + 15));
+                    if (!onlyTakes || Figuren[Feld + 15].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld + 15));
                 }
             }
             if ((AbstandNord[Feld] >= 1) && (AbstandWest[Feld] >= 2))
             {
                 if (Figuren[Feld].Farbe != Figuren[Feld + 6].Farbe)
                 {
-                    if (!onlyTakes || Figuren[Feld + 6].Farbe != "leer") moves.Add(new Zug(Feld, Feld + 6));
+                    if (!onlyTakes || Figuren[Feld + 6].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld + 6));
                 }
             }
-            return moves;
         }
-        public List<Zug> GenerateKingMoves(int Feld, bool CheckCastles, bool onlyTakes)
+        public void GenerateKingMoves(int Feld, bool CheckCastles, bool onlyTakes)
         {
-            List<Zug> moves = new List<Zug>();
-            int[] Offsets = { 7, 8, 9, 1, -7, -8, -9, -1 };
             int[] Abstände =
             {
                 Math.Min(AbstandNord[Feld], AbstandWest[Feld]),
@@ -425,9 +418,9 @@ namespace Schachengine
             {
                 if (Abstände[i] > 0)
                 {
-                    if (Figuren[Feld].Farbe != Figuren[Feld + Offsets[i]].Farbe)
+                    if (Figuren[Feld].Farbe != Figuren[Feld + kingOffsets[i]].Farbe)
                     {
-                        if (!onlyTakes || Figuren[Feld + Offsets[i]].Farbe != "leer") moves.Add(new Zug(Feld, Feld + Offsets[i]));
+                        if (!onlyTakes || Figuren[Feld + kingOffsets[i]].Farbe != Farbe.leer) pseudolegal.Add(new Zug(Feld, Feld + kingOffsets[i]));
                     }
                 }
             }
@@ -442,7 +435,7 @@ namespace Schachengine
                         {
                             Zug move = new Zug(Feld, Feld + 2);
                             move.moveType = MoveType.RochadeKS;
-                            moves.Add(move);
+                            pseudolegal.Add(move);
                         }
                     }
                     if (hasCastlingRight(1) && (Figuren[1].Art == 0) && (Figuren[2].Art == 0) && (Figuren[3].Art == 0))
@@ -451,7 +444,7 @@ namespace Schachengine
                         {
                             Zug move = new Zug(Feld, Feld - 2);
                             move.moveType = MoveType.RochadeQS;
-                            moves.Add(move);
+                            pseudolegal.Add(move);
                         }
                     }
                 }
@@ -464,7 +457,7 @@ namespace Schachengine
                         {
                             Zug move = new Zug(Feld, Feld + 2);
                             move.moveType = MoveType.RochadeKS;
-                            moves.Add(move);
+                            pseudolegal.Add(move);
                         }
                     }
                     if (hasCastlingRight(3) && (Figuren[57].Art == 0) && (Figuren[58].Art == 0) && (Figuren[59].Art == 0))
@@ -473,13 +466,13 @@ namespace Schachengine
                         {
                             Zug move = new Zug(Feld, Feld - 2);
                             move.moveType = MoveType.RochadeQS;
-                            moves.Add(move);
+                            pseudolegal.Add(move);
                         }
 
                     }
                 }
             }
-            return moves;
+            return;
         }
     }
 }

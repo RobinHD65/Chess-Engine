@@ -279,7 +279,7 @@ namespace Schachengine
             }
             else
             {
-                if ((instance.weißamzug & instance.Figuren[Feld].Farbe == "Weiß") | (!instance.weißamzug & instance.Figuren[Feld].Farbe == "Schwarz"))
+                if ((instance.weißamzug & instance.Figuren[Feld].Farbe == Farbe.Weiß) || (!instance.weißamzug & instance.Figuren[Feld].Farbe == Farbe.Schwarz))
                 {
                     pieceSelected = true;
                     Input.Startfeld = Feld;

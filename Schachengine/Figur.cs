@@ -6,9 +6,15 @@ using System.Threading.Tasks;
 
 namespace Schachengine
 {
+    public enum Farbe
+    {
+        Weiß,
+        Schwarz,
+        leer
+    }
     public struct Figur
     {
-        public string Farbe;
+        public Farbe Farbe;
         public int Art;
         public int Wert;
         public int Type;
@@ -19,17 +25,17 @@ namespace Schachengine
             Art = _Art;
             if (Art <= 6)
             {
-                Farbe = "Weiß";
+                Farbe = Farbe.Weiß;
                 nocArt -= 0;
             }
             else
             {
-                Farbe = "Schwarz";
+                Farbe = Farbe.Schwarz;
                 nocArt -= 6;
             }
             if (Art == 0)
             {
-                Farbe = "leer";
+                Farbe = Farbe.leer;
             }
             //Figurenwerte nach Hans Berliner
             switch (nocArt)

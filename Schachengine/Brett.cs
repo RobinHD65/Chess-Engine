@@ -33,6 +33,7 @@ namespace Schachengine
         public int PosKönig; //König von dem der am Zug ist
 
         //Abstände zum Rand vom jeweiligen Figur
+        public static int[,] Abstände = new int[8, 64];
         public static int[] AbstandNord = new int[64];
         public static int[] AbstandOst = new int[64];
         public static int[] AbstandSüd = new int[64];
@@ -42,50 +43,27 @@ namespace Schachengine
         public static int[] AbstandSO = new int[64];
         public static int[] AbstandSW = new int[64];
 
-        public static List<Brett> history = new List<Brett>();
+        //History für UnmakeMove
+        public Stack<UnmakeInfo> unmakeInfos = new Stack<UnmakeInfo>();
         public static List<ulong> zobrist_history = new List<ulong>();
-        //Piece-Lists
-        public List<int> whitePawns = new();
-        public List<int> whiteKnights = new();
-        public List<int> whiteBishops = new();
-        public List<int> whiteRooks = new();
-        public List<int> whiteQueens = new();
 
-        public List<int> blackPawns = new();
-        public List<int> blackKnights = new();
-        public List<int> blackBishops = new();
-        public List<int> blackRooks = new();
-        public List<int> blackQueens = new();
-        public Brett Copy()
-        {
-            Brett copy = new Brett();
-            for (int i = 0; i <= 63; i++)
-            {
-                copy.Figuren[i] = Figuren[i];
-            }
-            copy.fzregel = fzregel;
-            copy.zugnr = zugnr;
-            copy.Rochaderechte = Rochaderechte;
-            copy.enpassant = enpassant;
-            copy.enpassant_Index = enpassant_Index;
-            copy.whiteKingPos = whiteKingPos;
-            copy.blackKingPos = blackKingPos;
-            copy.PosKönig = PosKönig;
-            copy.Endspiel = Endspiel;
-            return copy;
-        }
-        public string ColorToMove()
+        //Offsets für Schachüberprüfung
+        public static int[] diagonalOffsets = { -9, -7, 7, 9 };
+        public static int[] horivertiOffsets = { -8, -1, 1, 8 };
+        public static int[] kingOffsets = { 7, 8, 9, 1, -7, -8, -9, -1 };
+
+        public Farbe ColorToMove()
         {
             if (weißamzug)
-                return "Weiß";
+                return Farbe.Weiß;
             else
-                return "Schwarz";
+                return Farbe.Schwarz;
         }
         public bool hasCastlingRight(int Index) // 0: whiteKS 1: whiteQS 2:blackKS 3:blackQS 
         {
             switch (Index)
             {
-                case 0: //whiteKS                   
+                case 0: //whiteKS                  
                     return (Rochaderechte & whiteKS) != 0;
                 case 1: //whiteQS
                     return (Rochaderechte & whiteQS) != 0;
@@ -98,10 +76,18 @@ namespace Schachengine
         }
         public void MakeMove(Zug zug)
         {
-            history.Add(Copy()); // Save the current state before making the move
+            //History speichern
+            UnmakeInfo unmakeInfo = new UnmakeInfo();
+            unmakeInfo.letzterZug = zug;
+            unmakeInfo.fzregel = fzregel;
+            unmakeInfo.rochaderechte = Rochaderechte;
+            unmakeInfo.enpassantIndex = enpassant_Index;
+            unmakeInfo.geschlageneFigur = Figuren[zug.Zielfeld];
+            unmakeInfo.gezogeneFigur = Figuren[zug.Startfeld];
+            unmakeInfos.Push(unmakeInfo);
             zobrist_history.Add(zobrist_key);
             //Fünfzig Züge-Regel
-            if (Figuren[zug.Startfeld].Art == 1 || Figuren[zug.Startfeld].Art == 7 || Figuren[zug.Zielfeld].Farbe != "leer")
+            if (Figuren[zug.Startfeld].Art == 1 || Figuren[zug.Startfeld].Art == 7 || Figuren[zug.Zielfeld].Farbe != Farbe.leer)
             {
                 fzregel = 0;
             } else
@@ -275,28 +261,72 @@ namespace Schachengine
         }
         public void UnmakeMove()
         {
+
             if(zugnr == 1 && weißamzug) 
                 return; // Keine Züge zum Rückgängigmachen
-            Figuren = history[history.Count - 1].Figuren;          
-            fzregel = history[history.Count - 1].fzregel;
-            zugnr = history[history.Count - 1].zugnr;
-            Rochaderechte = history[history.Count - 1].Rochaderechte;
-            enpassant = history[history.Count - 1].enpassant;
-            enpassant_Index = history[history.Count - 1].enpassant_Index;
-            blackKingPos = history[history.Count - 1].blackKingPos;
-            whiteKingPos = history[history.Count - 1].whiteKingPos;
-            PosKönig = history[history.Count - 1].PosKönig;
+            UnmakeInfo unmakeInfo = unmakeInfos.Pop();
+            Figuren[unmakeInfo.letzterZug.Startfeld] = unmakeInfo.gezogeneFigur;
+            Figuren[unmakeInfo.letzterZug.Zielfeld] = unmakeInfo.geschlageneFigur;
+            switch (unmakeInfo.letzterZug.moveType)
+            {
+                case MoveType.RochadeKS:
+                    // restore rook based on who moved (use saved gezogeneFigur)
+                    if (unmakeInfo.gezogeneFigur.Art == 6) // white king moved
+                    {
+                        Figuren[7] = new Figur(4);
+                        Figuren[5] = new Figur(0);
+                    }
+                    else // black king moved
+                    {
+                        Figuren[63] = new Figur(10);
+                        Figuren[61] = new Figur(0);
+                    }
+                    break;
+                case MoveType.RochadeQS:
+                    if (unmakeInfo.gezogeneFigur.Art == 6) // white king moved
+                    {
+                        Figuren[0] = new Figur(4);
+                        Figuren[3] = new Figur(0);
+                    }
+                    else // black king moved
+                    {
+                        Figuren[56] = new Figur(10);
+                        Figuren[59] = new Figur(0);
+                    }
+                    break;
+                case MoveType.Enpassant:
+                    if (unmakeInfo.gezogeneFigur.Farbe == Farbe.Weiß)
+                    {
+                        Figuren[unmakeInfo.letzterZug.Zielfeld - 8] = new Figur(7);
+                    }
+                    else
+                    {
+                        Figuren[unmakeInfo.letzterZug.Zielfeld + 8] = new Figur(1);
+                    }
+                    break;
+
+            }
+            fzregel = unmakeInfo.fzregel;
+            // decrement fullmove number if the mover was black
+            if (unmakeInfo.gezogeneFigur.Farbe == Farbe.Schwarz)
+                zugnr -= 1;
+            Rochaderechte = unmakeInfo.rochaderechte;
+            enpassant_Index = unmakeInfo.enpassantIndex;
+            // restore king pos based on who moved
+            if (unmakeInfo.gezogeneFigur.Art == 6)
+                whiteKingPos = unmakeInfo.letzterZug.Startfeld;
+            else if (unmakeInfo.gezogeneFigur.Art == 12)
+                blackKingPos = unmakeInfo.letzterZug.Startfeld;
+
+            UpdateKingPos();
             weißamzug = !weißamzug;
-            Endspiel = history[history.Count - 1].Endspiel;
             zobrist_key = zobrist_history[zobrist_history.Count - 1];
-            history.RemoveAt(history.Count - 1); // Letzten Zustand entfernen
             zobrist_history.RemoveAt(zobrist_history.Count - 1);
         }
 		
         public void Clear()
         {
             for (int i = 0; i <= 63; i++) Figuren[i] = new Figur(0);
-            history.Clear();
             zobrist_history.Clear();
             fzregel = 0;
             zugnr = 0;
@@ -400,19 +430,15 @@ namespace Schachengine
                         //Schwarz
                         case 'r':
                             Figuren[i] = new Figur(10);
-                            blackRooks.Add(i);
                             break;
                         case 'n':
                             Figuren[i] = new Figur(8);
-                            blackKnights.Add(i);
                             break;
                         case 'b':   
                             Figuren[i] = new Figur(9);
-                            blackBishops.Add(i);
                             break;
                         case 'q':
                             Figuren[i] = new Figur(11);
-                            blackQueens.Add(i);
                             break;
                         case 'k':
                             Figuren[i] = new Figur(12);
@@ -420,24 +446,19 @@ namespace Schachengine
                             break;
                         case 'p':
                             Figuren[i] = new Figur(7);
-                            blackPawns.Add(i);
                             break;
                         //Weiß
                         case 'R':
                             Figuren[i] = new Figur(4);
-                            whiteRooks.Add(i);
                             break;
                         case 'N':
                             Figuren[i] = new Figur(2);
-                            whiteKnights.Add(i);
                             break;
                         case 'B':
                             Figuren[i] = new Figur(3);
-                            whiteBishops.Add(i);
                             break;
                         case 'Q':
                             Figuren[i] = new Figur(5);
-                            whiteQueens.Add(i);
                             break;
                         case 'K':
                             Figuren[i] = new Figur(6);
@@ -445,7 +466,6 @@ namespace Schachengine
                             break;
                         case 'P':
                             Figuren[i] = new Figur(1);
-                            whitePawns.Add(i);
                             break;
                         //Nummern
                         case '/':
@@ -497,6 +517,17 @@ namespace Schachengine
                 AbstandSO[i] = Math.Min(AbstandSüd[i], AbstandOst[i]);
                 AbstandSW[i] = Math.Min(AbstandSüd[i], AbstandWest[i]);
             }
+            for (int i = 0; i < 64; i++)
+            {
+                Abstände[0, i] = AbstandSüd[i];
+                Abstände[1, i] = AbstandWest[i];
+                Abstände[2, i] = AbstandOst[i];
+                Abstände[3, i] = AbstandNord[i];
+                Abstände[4, i] = AbstandSW[i];
+                Abstände[5, i] = AbstandSO[i];
+                Abstände[6, i] = AbstandNW[i];
+                Abstände[7, i] = AbstandNO[i];
+            }
             
         }
         public void UpdateKingPos()
@@ -513,28 +544,13 @@ namespace Schachengine
         public bool SquareInCheck(int Feld)
         {
             int i, j;
-            int[] diagonalOffsets = { -9, -7, 7, 9 };
-            int[] horivertiOffsets = { -8, -1, 1, 8 };
-            int[] diagonalAbstände =
-            {
-                AbstandSW[Feld],
-                AbstandSO[Feld],
-                AbstandNW[Feld],
-                AbstandNO[Feld],
-            };
-            int[] horivertiAbstände =
-            {
-                AbstandSüd[Feld],
-                AbstandWest[Feld],
-                AbstandOst[Feld],
-                AbstandNord[Feld]
-            };
             //diagonal            
-            for (i = 0; i < 4; i++)
+            for (i = 4; i <= 7; i++)
             {
-                for (j = 1; j <= diagonalAbstände[i]; j++)
+                int d = i - 4;
+                for (j = 1; j <= Abstände[i, Feld]; j++)
                 {
-                    int checkFeld = Feld + j * diagonalOffsets[i];
+                    int checkFeld = Feld + j * diagonalOffsets[d];
                     Figur checkFeldFigur = Figuren[checkFeld];
 
                     if (ColorToMove() == Figuren[checkFeld].Farbe) //Schach wird von eigener Figur abgeblockt
@@ -542,9 +558,9 @@ namespace Schachengine
 
                     if (j == 1) // direkt benachbarte Felder
                     {
-                        if (!weißamzug && (checkFeldFigur.Type == 1) && (i < 2)) //weißer Bauer gibt Schach von Süden
+                        if (!weißamzug && (checkFeldFigur.Type == 1) && (d < 2)) //weißer Bauer gibt Schach von Süden
                             return true;
-                        if (weißamzug && (checkFeldFigur.Type == 1) && (i >= 2)) //schwarzer Bauer gibt Schach von Norden
+                        if (weißamzug && (checkFeldFigur.Type == 1) && (d >= 2)) //schwarzer Bauer gibt Schach von Norden
                             return true;
                         if (checkFeldFigur.Type == 6) // König gibt nur benachbart Schach
                             return true;
@@ -564,7 +580,7 @@ namespace Schachengine
             //horizontal und vertikal
             for (i = 0; i < 4; i++)
             {
-                for (j = 1; j <= horivertiAbstände[i]; j++)
+                for (j = 1; j <= Abstände[i, Feld]; j++)
                 {
                     int checkFeld = Feld + j * horivertiOffsets[i];
                     Figur checkFeldFigur = Figuren[checkFeld];

@@ -18,7 +18,7 @@ namespace Schachengine
 
         public List<Zug> legalMoves = new List<Zug>();
 
-        public int[][] Bewertungstabellen =
+        public readonly int[][] Bewertungstabellen =
         {
             //Bauern
            new int[]{  0,  0,  0,  0,  0,  0,  0,  0,
@@ -98,7 +98,7 @@ namespace Schachengine
             int Bewertung = 0;
             for (int i = 0; i <= 63; i++)
             {
-                if (Figuren[i].Farbe == "Weiß")
+                if (Figuren[i].Farbe == Farbe.Weiß)
                 {
                     Typ = Figuren[i].Art;
                     MaterialWeiß += Figuren[i].Wert;
@@ -119,7 +119,7 @@ namespace Schachengine
                         MaterialWeiß += Bewertungstabellen[Typ - 1][63 - i];
                     }
                 }
-                else if (Figuren[i].Farbe == "Schwarz")
+                else if (Figuren[i].Farbe == Farbe.Schwarz)
                 {
                     Typ = Figuren[i].Art - 6;
                     MaterialSchwarz += Figuren[i].Wert;
