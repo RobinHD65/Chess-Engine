@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
@@ -9,17 +10,29 @@ using System.Windows.Forms;
 
 namespace Schachengine
 {
+    public enum Result 
+    { 
+        whiteWin,
+        blackWin,
+        draw,
+        undecided
+    }
     class Suche : MoveGenerator
     {
         public Zug gespeicherterZug;
         public int Suchtiefe;
         public int Evalve;
+        public int AlphaCuts;
+        public int BetaCuts;
+        public int QuiesceCalls;
+        public int nodes;
         public int maxZeit = 10;
 
         public List<Zug> legalMoves = new List<Zug>();
 
         public readonly int[][] Bewertungstabellen =
         {
+            //Mittelspielbewertung Tabellen
             //Bauern
            new int[]{  0,  0,  0,  0,  0,  0,  0,  0,
                        50, 50, 50, 50, 50, 50, 50, 50,
@@ -65,7 +78,7 @@ namespace Schachengine
                      -10,  5,  5,  5,  5,  5,  0,-10,
                      -10,  0,  5,  0,  0,  0,  0,-10,
                      -20,-10,-10, -5, -5,-10,-10,-20},
-           //König Eröffnung/Mittelspiel
+           //König 
            new int[]{-30,-40,-40,-50,-50,-40,-40,-30,
                      -30,-40,-40,-50,-50,-40,-40,-30,
                      -30,-40,-40,-50,-50,-40,-40,-30,
@@ -74,7 +87,54 @@ namespace Schachengine
                      -10,-20,-20,-20,-20,-20,-20,-10,
                       20, 20,  0,  0,  0,  0, 20, 20,
                       20, 30, 10,  0,  0, 10, 30, 20},
-           //König Endspiel
+
+           //Endspielbewertung Tabellen
+           //Bauern
+           new int[]{  0,  0,  0,  0,  0,  0,  0,  0,
+                       50, 50, 50, 50, 50, 50, 50, 50,
+                       30, 30, 30, 30, 30, 30, 30, 30,
+                       10, 10, 10, 30, 30, 10,  10, 10,
+                       0,  0,  0, 20, 20,  0,  0,  0,
+                       -30,-30,-30,-40,-40,-30,-30,-30,
+                       -30,-30,-30,-40,-40,-30,-30,-30,
+                       0,  0,  0,  0,  0,  0,  0,  0},
+            //Springer
+           new int[]{-50,-40,-30,-30,-30,-30,-40,-50,
+                     -40,-20,  0,  0,  0,  0,-20,-40,
+                     -30,  0, 10, 15, 15, 10,  0,-30,
+                     -30,  5, 15, 20, 20, 15,  5,-30,
+                     -30,  0, 15, 20, 20, 15,  0,-30,
+                     -30,  5, 10, 15, 15, 10,  5,-30,
+                     -40,-20,  0,  5,  5,  0,-20,-40,
+                     -50,-40,-30,-30,-30,-30,-40,-50},
+           //Läufer
+           new int[]{-20,-10,-10,-10,-10,-10,-10,-20,
+                     -10,  0,  0,  0,  0,  0,  0,-10,
+                     -10,  0,  5, 10, 10,  5,  0,-10,
+                     -10,  5,  5, 10, 10,  5,  5,-10,
+                     -10,  0, 10, 10, 10, 10,  0,-10,
+                     -10,  5, 10,  5,  5, 10,  5,-10,
+                     -10, 10,  0,  0,  0,  0, 10,-10,
+                     -20,-10,-10,-10,-10,-10,-10,-20,},
+           //Turm
+           new int[]{ 0,  0,  0,  0,  0,  0,  0,  0,
+                      10, 10, 10, 10, 10, 10, 10, 10,
+                      0,  0,  0,  0,  0,  0,  0,  0,
+                      0,  0,  0,  0,  0,  0,  0,  0,
+                      0,  0,  0,  0,  0,  0,  0,  0,
+                      0,  0,  0,  0,  0,  0,  0,  0,
+                      0,  0,  0,  0,  0,  0,  0,  0,
+                      5,  5,  5,  5,  5,  5,  5,  5},
+           // Dame
+           new int[]{-20,-10,-10, -5, -5,-10,-10,-20,
+                     -10,  0,  0,  0,  0,  0,  0,-10,
+                     -10,  0,  5,  5,  5,  5,  0,-10,
+                      -5,  0,  5,  5,  5,  5,  0, -5,
+                       0,  0,  5,  5,  5,  5,  0, -5,
+                     -10,  5,  5,  5,  5,  5,  0,-10,
+                     -10,  0,  5,  0,  0,  0,  0,-10,
+                     -20,-10,-10, -5, -5,-10,-10,-20},
+           //König 
            new int[]{-50,-40,-30,-20,-20,-30,-40,-50,
                      -30,-20,-10,  0,  0,-10,-20,-30,
                      -30,-10, 20, 30, 30, 20,-10,-30,
@@ -100,19 +160,12 @@ namespace Schachengine
             {
                 if (Figuren[i].Farbe == Farbe.Weiß)
                 {
-                    Typ = Figuren[i].Art;
+                    Typ = Figuren[i].ID;
                     MaterialWeiß += Figuren[i].Wert;
                     //Kriterium Figurenaktivität
-                    if (Typ == 6)
+                    if (Endspiel)
                     {
-                        if (Endspiel)
-                        {
-                            MaterialWeiß += Bewertungstabellen[6][63 - i];
-                        }
-                        else
-                        {
-                            MaterialWeiß += Bewertungstabellen[5][63 - i];
-                        }
+                        MaterialWeiß += Bewertungstabellen[Typ + 5][63 - i];
                     }
                     else
                     {
@@ -121,19 +174,12 @@ namespace Schachengine
                 }
                 else if (Figuren[i].Farbe == Farbe.Schwarz)
                 {
-                    Typ = Figuren[i].Art - 6;
+                    Typ = Figuren[i].ID - 6;
                     MaterialSchwarz += Figuren[i].Wert;
                     //Kriterium Figurenaktivität
-                    if (Typ == 6)
+                    if (Endspiel)
                     {
-                        if (Endspiel)
-                        {
-                            MaterialSchwarz += Bewertungstabellen[6][i];
-                        }
-                        else
-                        {
-                            MaterialSchwarz += Bewertungstabellen[5][i];
-                        }
+                        MaterialSchwarz += Bewertungstabellen[Typ + 5][i];
                     }
                     else
                     {
@@ -149,19 +195,19 @@ namespace Schachengine
             Bewertung = MaterialWeiß - MaterialSchwarz;
             switch (WinChecker(true))
             {
-                case "1-0":
+                case Result.whiteWin:
                     Bewertung = 100000 - pyCount;
                     break;
-                case "0-1":
+                case Result.blackWin:
                     Bewertung = -100000 + pyCount;
                     break;
-                case "1/2-1/2":
+                case Result.draw:
                     Bewertung = 0;
                     break;
             }
             return Bewertung;
         }
-        public string WinChecker(bool drawDoubleRepeat)
+        public Result WinChecker(bool drawDoubleRepeat)
         {
             //Matt und Patt
             if (LegalMoveGenerator(false).Count == 0)
@@ -171,21 +217,21 @@ namespace Schachengine
                 {
                     if (weißamzug)
                     {
-                        return "0-1";
+                        return Result.blackWin;
                     }
                     else
                     {
-                        return "1-0";
+                        return Result.whiteWin;
                     }
                 }
                 else
                 {
-                    return "1/2-1/2";
+                    return Result.draw;
                 }
             }
             //Fünfzig-Züge-Regel
             if (fzregel >= 100)
-                return "1/2-1/2";
+                return Result.draw;
             //Dreifache-Stellungswiederholung
             int repCount = zobrist_history.Count(x => x == zobrist_key);
             int drawCount = 2;
@@ -193,11 +239,11 @@ namespace Schachengine
                 drawCount = 1;
             if (repCount == drawCount)
             {
-                return "1/2-1/2";
+                return Result.draw;
             }
-            return "";
+            return Result.undecided;
         }
-        public string WinChecker(bool drawDoubleRepeat, List<Zug> legalMoves)
+        public Result WinChecker(bool drawDoubleRepeat, List<Zug> legalMoves)
         {
             //Matt und Patt
             if (legalMoves.Count == 0)
@@ -207,21 +253,21 @@ namespace Schachengine
                 {
                     if (weißamzug)
                     {
-                        return "0-1";
+                        return Result.blackWin;
                     }
                     else
                     {
-                        return "1-0";
+                        return Result.whiteWin;
                     }
                 }
                 else
                 {
-                    return "1/2-1/2";
+                    return Result.draw;
                 }
             }
             //Fünfzig-Züge-Regel
             if (fzregel >= 100)
-                return "1/2-1/2";
+                return Result.draw;
             //Dreifache-Stellungswiederholung
             int repCount = zobrist_history.Count(x => x == zobrist_key);
             int drawCount = 2;
@@ -229,9 +275,9 @@ namespace Schachengine
                 drawCount = 1;
             if (repCount == drawCount)
             {
-                return "1/2-1/2";
+                return Result.draw;
             }
-            return "";
+            return Result.undecided;
         }
         public int Quiesce(int tiefe, int spieler, int alpha, int beta)
         {
@@ -239,17 +285,22 @@ namespace Schachengine
             //Stand Pat
             int max = static_eval;
             if (max >= beta)
+            {
                 return max;
-            if (max >= alpha)
+            }
+                
+            if (max >= alpha) 
+            {
                 alpha = max;
+            }            
             // delta pruning
             if (!Endspiel)
             {
                 int delta = 1000;
                 if (max < alpha - delta)
                     return alpha;
-            }
-
+            } 
+            //Erst ab hier zählen, da es erst ab hier teuer wird
             int wert;
             List<Zug> Captures = LegalMoveGenerator(true);
             foreach (Zug capture in Captures)
@@ -260,10 +311,15 @@ namespace Schachengine
                 if (wert > max)
                 {
                     max = wert;
-                    if (wert > alpha) alpha = wert;
+                    if (wert > alpha)
+                    {
+                        alpha = wert;
+                    }
                 }
                 if (wert > beta)
+                {
                     return max;
+                }
             }
             return max;
         }
@@ -273,7 +329,7 @@ namespace Schachengine
         {
             if (zSekunden >= maxZeit && Suchtiefe > 1) return -1; 
             legalMoves = LegalMoveGenerator(false);
-            if ((tiefe == Suchtiefe) || (WinChecker(true, legalMoves) != "")) return Quiesce(tiefe, spieler, alpha, beta);
+            if ((tiefe == Suchtiefe) || (WinChecker(true, legalMoves) != Result.undecided)) return Quiesce(tiefe, spieler, alpha, beta);            
             int max = int.MinValue + 2;
             foreach (Zug move in legalMoves)
             {
@@ -285,14 +341,18 @@ namespace Schachengine
                 {
                     max = wert;
                     if (wert > alpha)
+                    {
                         alpha = wert;
+                    }
                     if (tiefe == 0)
                     {
                         gespeicherterZug = move;
                     }
                 }
                 if (wert >= beta)
+                {
                     return max;
+                }
             }
             return max;
         }
@@ -307,9 +367,12 @@ namespace Schachengine
 
                 Zug besterZug = default;
                 int besterWert = 0;
-
+                AlphaCuts = 0;
+                BetaCuts = 0;
+                QuiesceCalls = 0;
+                nodes = 0;
                 // Iterative Deepening
-                for (Suchtiefe = 1; Suchtiefe <= 20; Suchtiefe++) // 20 nur als Maximalgrenze
+                for (Suchtiefe = 1; Suchtiefe <= 20; Suchtiefe++) // 20 nur als Maximalgrenze(wird nie erreicht)
                 {
                     if (weißamzug)
                     {
@@ -318,8 +381,7 @@ namespace Schachengine
                     else
                     {
                         besterWert = -NegaMax(0, -1, int.MinValue + 2, int.MaxValue - 2);
-                    }
-                    // Zeitkontrolle: abbrechen, falls maxZeit überschritten
+                    }             
                     if (Suchtiefe == 1)
                     {
                         besterZug = gespeicherterZug;

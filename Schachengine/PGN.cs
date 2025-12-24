@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ namespace Schachengine
 
     static class PGN
     {
+        static Suche instance = new Suche();
         public static string TypeToString(int type)
         {
             switch (type)
@@ -46,6 +48,7 @@ namespace Schachengine
                         pgn += "\n";
                     }
                     i++;
+                    instance.MakeMove(zug);
                     return pgn;
                 case MoveType.RochadeQS:
                     if (i % 2 == 0)
@@ -58,33 +61,50 @@ namespace Schachengine
                         pgn += "\n";
                     }
                     i++;
+                    instance.MakeMove(zug);
                     return pgn;
-                case MoveType.Enpassant:
-                    break;
 
             }
             if (i % 2 == 0)
             {
                 pgn += (1 + i / 2).ToString() + ". ";
             }
-            // Schreibe Ausgangsfeld
-            pgn += IndexToSquare(zug.Startfeld) + "-" + IndexToSquare(zug.Zielfeld);
+            //Schreibe Figurtyp wenn kein Bauer
+            if (instance.Figuren[zug.Startfeld].Type != 1)
+            {
+                pgn += TypeToString(instance.Figuren[zug.Startfeld].Type);
+                pgn += IndexToSquare(zug.Startfeld);
+            }
+                
+            //Schlagzüge
+            if (instance.Figuren[zug.Zielfeld].ID != 0 || zug.moveType == MoveType.Enpassant)
+            {
+                if (instance.Figuren[zug.Startfeld].Type == 1)
+                    pgn += IndexToSquare(zug.Startfeld)[0];
+                pgn += "x";
+            }
+            // Schreibe Zielfeld
+            pgn += IndexToSquare(zug.Zielfeld);
             //Bauerumwandlung
             if (zug.Promotion != 0)
             {
                 pgn += TypeToString(zug.Promotion + 1);
             }
-            pgn += " ";
+            //Schach
+
+            pgn += " ";      
             //Zeilenumbruch nach jedem zweiten Zug
             if (i % 2 == 1)
             {
                 pgn += "\n";
             }
             i++;
+            instance.MakeMove(zug);
             return pgn;
         }
-        public static string ToPGN(List<Zug> moves)
+        public static string ToPGN(List<Zug> moves, string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") // fen = .. ist default-Wert
         {
+            instance.FenParser(fen);
             int i = 0;
             string pgn = "";
             foreach (Zug zug in moves)

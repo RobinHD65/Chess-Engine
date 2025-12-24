@@ -50,7 +50,7 @@ namespace Schachengine
             int i;
             for (i = 0; i < 64; i++)
             {
-                int figurIndex = brett.Figuren[i].Art;
+                int figurIndex = brett.Figuren[i].ID;
                 if (figurIndex != 0)
                 {
                     key ^= figures[figurIndex, i];

@@ -19,7 +19,7 @@ namespace Schachengine
         //Public-Deklarationen
         public bool invertion = false;
         public bool pieceSelected = false;
-        static Suche instance = new(); //Objekt Suche erbt von allem
+        static Suche instance = new(); //Objekt Suche erbt von allem also die eigentliche Engine
         Zug Input = new Zug();
         List<Zug> history = new List<Zug>();
 
@@ -54,7 +54,7 @@ namespace Schachengine
                 gestime = weiß_Minuten * 600 + weiß_Sekunden * 10 + weiß_zSekunden;
             }
             int thinktime = Math.Min(gestime / 20, 100);
-            Zug Computerzug = await instance.PlayMove(thinktime); 
+            Zug Computerzug = await instance.PlayMove(thinktime);
             label26.Text = instance.Evalve.ToString();
             label28.Text = instance.Suchtiefe.ToString();
             instance.MakeMove(Computerzug);
@@ -91,7 +91,8 @@ namespace Schachengine
                 checkBox1.Checked = true;
                 invertion = true;
                 playMove();
-            } else
+            }
+            else
             {
                 checkBox1.Checked = false;
                 invertion = false;
@@ -126,7 +127,6 @@ namespace Schachengine
                 //ausgewählte Figur wird grau makiert
                 if (i == Input.Startfeld & pieceSelected)
                 {
-
                     int place;
                     if (invertion)
                     {
@@ -177,7 +177,7 @@ namespace Schachengine
                     place = i;
                 }
                 float j = 7 - place / 8;
-                switch (instance.Figuren[i].Art)
+                switch (instance.Figuren[i].ID)
                 {
                     case 1:
                         e.Graphics.DrawImage(Properties.Resources.Bauer_Weiß, place % 8 * 100, j * 100);
@@ -330,18 +330,29 @@ namespace Schachengine
             label20.Text = instance.weißamzug.ToString();
             label23.Text = instance.blackKingPos.ToString();
             label24.Text = instance.whiteKingPos.ToString();
-            UpdateHistory();
-            string win = instance.WinChecker(false);
-            if (win != "")
+            Result result = instance.WinChecker(false);
+            richTextBox1.Text = PGN.ToPGN(history);
+            if (result != Result.undecided)
             {
-                MessageBox.Show(win);
+                switch(result) {                     
+                    case Result.whiteWin:
+                        MessageBox.Show("Weiß gewinnt!");
+                        break;
+                    case Result.blackWin:
+                        MessageBox.Show("Schwarz gewinnt!");
+                        break;
+                    case Result.draw:
+                        MessageBox.Show("Unentschieden!");
+                        break;
+                }
                 if (matchMode)
                 {
                     EndMatch();
                 }
             }
         }
-        private void EndMatch() {             
+        private void EndMatch()
+        {
             matchMode = false;
             timer1.Stop();
             button1.Enabled = true;
@@ -351,13 +362,27 @@ namespace Schachengine
         }
         private async void button3_Click(object sender, EventArgs e)
         {
+            if (!int.TryParse(textBox3.Text, out int thinktime))
+            {
+                MessageBox.Show("Bitte eine gültige Zahl für die Denkzeit eingeben.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
+            button1.Enabled = false;
             button3.Enabled = false;
-            Zug Computerzug = await instance.PlayMove(20); // 20 Zehntel als Standardzeit
+            Zug Computerzug = await instance.PlayMove(thinktime); // 20 Zehntel als Standardzeit
             label26.Text = instance.Evalve.ToString();
             label28.Text = instance.Suchtiefe.ToString();
             history.Add(Computerzug);
             instance.MakeMove(Computerzug);
             UpdateUI();
+
+            //Debugging-Informationen
+            richTextBox2.Text = "Nodes: " + instance.nodes.ToString() + "\n" +
+                "AlphaCuts: " + instance.AlphaCuts.ToString() + "\n" +
+                "BetaCuts: " + instance.BetaCuts.ToString() + "\n" +
+                "QuiescenceNodes: " + instance.QuiesceCalls.ToString() + "\n";
+
+            button1.Enabled = true;
             button3.Enabled = true;
         }
         private void button4_Click(object sender, EventArgs e)
@@ -368,10 +393,6 @@ namespace Schachengine
             {
                 MessageBox.Show(PGN.IndexToSquare(capture.Startfeld) + "-" + PGN.IndexToSquare(capture.Zielfeld));
             }
-        }
-        private void UpdateHistory()
-        {
-            richTextBox1.Text = PGN.ToPGN(history);
         }
 
         private void button5_Click(object sender, EventArgs e)
@@ -445,7 +466,7 @@ namespace Schachengine
                 if (weiß_Minuten <= 0 & weiß_Sekunden <= 0 & weiß_zSekunden <= 0)
                 {
                     EndMatch();
-                    MessageBox.Show("Weiß hat verloren!");                   
+                    MessageBox.Show("Weiß hat verloren!");
                 }
             }
             else
@@ -465,9 +486,14 @@ namespace Schachengine
                 if (schwarz_Minuten <= 0 & schwarz_Sekunden <= 0 & schwarz_zSekunden <= 0)
                 {
                     EndMatch();
-                    MessageBox.Show("Schwarz hat verloren!");              
+                    MessageBox.Show("Schwarz hat verloren!");
                 }
             }
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            richTextBox1.Text = PGN.ToPGN(history);
         }
     }
 }

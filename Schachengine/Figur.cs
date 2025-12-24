@@ -15,15 +15,15 @@ namespace Schachengine
     public struct Figur
     {
         public Farbe Farbe;
-        public int Art;
+        public int ID; //Figurart mit Farbe
         public int Wert;
-        public int Type;
+        public int Type; //Figurart ohne Farbe
 
-        public Figur(int _Art)
+        public Figur(int _ID)
         {
-            int nocArt = _Art;
-            Art = _Art;
-            if (Art <= 6)
+            int nocArt = _ID;
+            ID = _ID;
+            if (ID <= 6)
             {
                 Farbe = Farbe.Weiß;
                 nocArt -= 0;
@@ -33,7 +33,7 @@ namespace Schachengine
                 Farbe = Farbe.Schwarz;
                 nocArt -= 6;
             }
-            if (Art == 0)
+            if (ID == 0)
             {
                 Farbe = Farbe.leer;
             }

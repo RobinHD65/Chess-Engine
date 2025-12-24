@@ -30,13 +30,12 @@ namespace Schachengine
 
         }
         public List<Zug> LegalMoveGenerator(bool onlyTakes)
-        {
-            
-            GenerateMoves(true, onlyTakes);
+        {       
+            GenerateMoves(onlyTakes);
             List<Zug> legaleZüge = new();
             if (zobrist_key == pvHash)
             {
-                pvMove.GuessedScore = 10000;
+                pvMove.GuessedScore = 1_000_000_000;
                 int idx = pseudolegal.FindIndex(z => z.Startfeld == pvMove.Startfeld && z.Zielfeld == pvMove.Zielfeld); 
                 if (idx >= 0) pseudolegal.RemoveAt(idx);
                 legaleZüge.Add(pvMove);
@@ -51,32 +50,18 @@ namespace Schachengine
                 {
                     if (Figuren[zug.Zielfeld].Farbe != Farbe.leer)
                     {
-                        zug.GuessedScore = Figuren[zug.Zielfeld].Wert - Figuren[zug.Startfeld].Wert;
+                        zug.GuessedScore = 1000 * Figuren[zug.Zielfeld].Wert - Figuren[zug.Startfeld].Wert;
                     }
                     legaleZüge.Add(zug);
                 }
                 weißamzug = !weißamzug;
                 UnmakeMove();
-                
-            
-            }
-            if (zobrist_key == pvHash)
-            {
-                for (int i = 0; i < legaleZüge.Count; i++)
-                {
-                    if (legaleZüge[i].Startfeld == pvMove.Startfeld && legaleZüge[i].Zielfeld == pvMove.Zielfeld)
-                    {
-                        Zug temp = legaleZüge[i];
-                        temp.GuessedScore = 10000;
-                        legaleZüge[i] = temp;
-                        break;
-                    }
-                }
+                          
             }
             legaleZüge.Sort((a, b) => b.GuessedScore.CompareTo(a.GuessedScore));
             return legaleZüge;
         }
-        public List<Zug> GenerateMoves(bool CheckCastles, bool onlyTakes)
+        public List<Zug> GenerateMoves(bool onlyTakes)
         {
             pseudolegal.Clear();
             for (int i = 0; i <= 63; i++)
@@ -102,7 +87,7 @@ namespace Schachengine
                             GenerateRookMoves(i, onlyTakes);
                             break;
                         case 6: //König
-                            GenerateKingMoves(i, CheckCastles, onlyTakes);
+                            GenerateKingMoves(i, onlyTakes);
                             break;
 
                     }
@@ -132,7 +117,7 @@ namespace Schachengine
 
                     if (!onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                     // Wenn ein Gegner auf dem Feld steht (nicht leer) -> abbrechen (Schlagzug)
-                    if (Figuren[dest].Art != 0)
+                    if (Figuren[dest].ID != 0)
                     {
                         if (onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                         break;
@@ -154,7 +139,7 @@ namespace Schachengine
                         break;
                     }
                     if (!onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
-                    if (Figuren[dest].Art != 0)
+                    if (Figuren[dest].ID != 0)
                     {
                         if (onlyTakes) pseudolegal.Add(new Zug(Feld, dest));
                         break;
@@ -401,7 +386,7 @@ namespace Schachengine
                 }
             }
         }
-        public void GenerateKingMoves(int Feld, bool CheckCastles, bool onlyTakes)
+        public void GenerateKingMoves(int Feld, bool onlyTakes)
         {
             int[] Abstände =
             {
@@ -424,12 +409,13 @@ namespace Schachengine
                     }
                 }
             }
-            //Rochaden Weiß
-            if (CheckCastles && !onlyTakes)
+            
+            if (!onlyTakes)
             {
+                //Rochaden Weiß
                 if (weißamzug)
                 {
-                    if (hasCastlingRight(0) && (Figuren[5].Art == 0) && (Figuren[6].Art == 0))
+                    if (hasCastlingRight(0) && (Figuren[5].ID == 0) && (Figuren[6].ID == 0))
                     {
                         if (!SquareInCheck(5) && !SquareInCheck(4))
                         {
@@ -438,7 +424,7 @@ namespace Schachengine
                             pseudolegal.Add(move);
                         }
                     }
-                    if (hasCastlingRight(1) && (Figuren[1].Art == 0) && (Figuren[2].Art == 0) && (Figuren[3].Art == 0))
+                    if (hasCastlingRight(1) && (Figuren[1].ID == 0) && (Figuren[2].ID == 0) && (Figuren[3].ID == 0))
                     {
                         if (!SquareInCheck(3) && !SquareInCheck(4))
                         {
@@ -451,7 +437,7 @@ namespace Schachengine
                 else
                 //Rochaden Schwarz
                 {
-                    if (hasCastlingRight(2) && (Figuren[61].Art == 0) && (Figuren[62].Art == 0))
+                    if (hasCastlingRight(2) && (Figuren[61].ID == 0) && (Figuren[62].ID == 0))
                     {
                         if (!SquareInCheck(61) && !SquareInCheck(60))
                         {
@@ -460,7 +446,7 @@ namespace Schachengine
                             pseudolegal.Add(move);
                         }
                     }
-                    if (hasCastlingRight(3) && (Figuren[57].Art == 0) && (Figuren[58].Art == 0) && (Figuren[59].Art == 0))
+                    if (hasCastlingRight(3) && (Figuren[57].ID == 0) && (Figuren[58].ID == 0) && (Figuren[59].ID == 0))
                     {
                         if (!SquareInCheck(59) && !SquareInCheck(60))
                         {

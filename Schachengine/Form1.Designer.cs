@@ -81,6 +81,8 @@ namespace Schachengine
             label32 = new System.Windows.Forms.Label();
             label33 = new System.Windows.Forms.Label();
             button6 = new System.Windows.Forms.Button();
+            textBox3 = new System.Windows.Forms.TextBox();
+            button7 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
@@ -120,7 +122,7 @@ namespace Schachengine
             radioButton3.AutoSize = true;
             radioButton3.Location = new System.Drawing.Point(829, 137);
             radioButton3.Name = "radioButton3";
-            radioButton3.Size = new System.Drawing.Size(53, 19);
+            radioButton3.Size = new System.Drawing.Size(54, 19);
             radioButton3.TabIndex = 3;
             radioButton3.Text = "Turm";
             radioButton3.UseVisualStyleBackColor = true;
@@ -171,7 +173,7 @@ namespace Schachengine
             // 
             richTextBox1.Location = new System.Drawing.Point(815, 208);
             richTextBox1.Name = "richTextBox1";
-            richTextBox1.Size = new System.Drawing.Size(279, 592);
+            richTextBox1.Size = new System.Drawing.Size(279, 564);
             richTextBox1.TabIndex = 9;
             richTextBox1.Text = "";
             // 
@@ -423,7 +425,7 @@ namespace Schachengine
             label27.AutoSize = true;
             label27.Location = new System.Drawing.Point(543, 894);
             label27.Name = "label27";
-            label27.Size = new System.Drawing.Size(35, 15);
+            label27.Size = new System.Drawing.Size(36, 15);
             label27.TabIndex = 37;
             label27.Text = "Tiefe:";
             // 
@@ -438,7 +440,7 @@ namespace Schachengine
             // 
             // button4
             // 
-            button4.Location = new System.Drawing.Point(963, 926);
+            button4.Location = new System.Drawing.Point(963, 930);
             button4.Name = "button4";
             button4.Size = new System.Drawing.Size(131, 23);
             button4.TabIndex = 39;
@@ -448,7 +450,7 @@ namespace Schachengine
             // 
             // button5
             // 
-            button5.Location = new System.Drawing.Point(963, 875);
+            button5.Location = new System.Drawing.Point(963, 879);
             button5.Name = "button5";
             button5.Size = new System.Drawing.Size(131, 23);
             button5.TabIndex = 40;
@@ -466,7 +468,7 @@ namespace Schachengine
             // 
             // textBox2
             // 
-            textBox2.Location = new System.Drawing.Point(1041, 901);
+            textBox2.Location = new System.Drawing.Point(1041, 904);
             textBox2.Name = "textBox2";
             textBox2.Size = new System.Drawing.Size(53, 23);
             textBox2.TabIndex = 42;
@@ -538,7 +540,7 @@ namespace Schachengine
             // 
             // button6
             // 
-            button6.Location = new System.Drawing.Point(963, 846);
+            button6.Location = new System.Drawing.Point(966, 856);
             button6.Name = "button6";
             button6.Size = new System.Drawing.Size(128, 23);
             button6.TabIndex = 49;
@@ -546,12 +548,32 @@ namespace Schachengine
             button6.UseVisualStyleBackColor = true;
             button6.Click += button6_Click;
             // 
+            // textBox3
+            // 
+            textBox3.Location = new System.Drawing.Point(1041, 831);
+            textBox3.Name = "textBox3";
+            textBox3.Size = new System.Drawing.Size(53, 23);
+            textBox3.TabIndex = 50;
+            textBox3.Text = "20";
+            // 
+            // button7
+            // 
+            button7.Location = new System.Drawing.Point(815, 778);
+            button7.Name = "button7";
+            button7.Size = new System.Drawing.Size(279, 23);
+            button7.TabIndex = 51;
+            button7.Text = "PGN generieren";
+            button7.UseVisualStyleBackColor = true;
+            button7.Click += button7_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             BackColor = System.Drawing.Color.Salmon;
             ClientSize = new System.Drawing.Size(1106, 961);
+            Controls.Add(button7);
+            Controls.Add(textBox3);
             Controls.Add(button6);
             Controls.Add(label33);
             Controls.Add(label32);
@@ -664,6 +686,8 @@ namespace Schachengine
         private System.Windows.Forms.Label label32;
         private System.Windows.Forms.Label label33;
         private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.TextBox textBox3;
+        private System.Windows.Forms.Button button7;
     }
 }
 

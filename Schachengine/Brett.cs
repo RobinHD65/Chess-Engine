@@ -48,9 +48,9 @@ namespace Schachengine
         public static List<ulong> zobrist_history = new List<ulong>();
 
         //Offsets für Schachüberprüfung
-        public static int[] diagonalOffsets = { -9, -7, 7, 9 };
-        public static int[] horivertiOffsets = { -8, -1, 1, 8 };
-        public static int[] kingOffsets = { 7, 8, 9, 1, -7, -8, -9, -1 };
+        public readonly static int[] diagonalOffsets = { -9, -7, 7, 9 };
+        public readonly static int[] horivertiOffsets = { -8, -1, 1, 8 };
+        public readonly static int[] kingOffsets = { 7, 8, 9, 1, -7, -8, -9, -1 };
 
         public Farbe ColorToMove()
         {
@@ -87,7 +87,7 @@ namespace Schachengine
             unmakeInfos.Push(unmakeInfo);
             zobrist_history.Add(zobrist_key);
             //Fünfzig Züge-Regel
-            if (Figuren[zug.Startfeld].Art == 1 || Figuren[zug.Startfeld].Art == 7 || Figuren[zug.Zielfeld].Farbe != Farbe.leer)
+            if (Figuren[zug.Startfeld].ID == 1 || Figuren[zug.Startfeld].ID == 7 || Figuren[zug.Zielfeld].Farbe != Farbe.leer)
             {
                 fzregel = 0;
             } else
@@ -164,10 +164,10 @@ namespace Schachengine
                 }
             }
             //Figuren auf ein Feld ziehen
-            int gezogeneFigur = Figuren[zug.Startfeld].Art;
-            if (Figuren[zug.Zielfeld].Art != 0) // Wenn Figur geschlagen wird
+            int gezogeneFigur = Figuren[zug.Startfeld].ID;
+            if (Figuren[zug.Zielfeld].ID != 0) // Wenn Figur geschlagen wird
             {
-                zobrist_key ^= Zobrist.figures[Figuren[zug.Zielfeld].Art, zug.Zielfeld];
+                zobrist_key ^= Zobrist.figures[Figuren[zug.Zielfeld].ID, zug.Zielfeld];
             }
             Figuren[zug.Zielfeld] = Figuren[zug.Startfeld];     
             Figuren[zug.Startfeld] = new Figur(0);
@@ -203,7 +203,7 @@ namespace Schachengine
                     Figuren[3] = new Figur(4);
                 }
                 //Bauernumwandlung
-                if ((zug.Zielfeld / 8 == 7) && (Figuren[zug.Zielfeld].Art == 1)) 
+                if ((zug.Zielfeld / 8 == 7) && (Figuren[zug.Zielfeld].ID == 1)) 
                 {
                     zobrist_key ^= Zobrist.figures[1, zug.Zielfeld];
                     zobrist_key ^= Zobrist.figures[zug.Promotion + 1, zug.Zielfeld];
@@ -213,7 +213,7 @@ namespace Schachengine
                     if (zug.Promotion == 4) Figuren[zug.Zielfeld] = new Figur(5);
                 }
                 //Update der Königsposition
-                if (Figuren[zug.Zielfeld].Art == 6)
+                if (Figuren[zug.Zielfeld].ID == 6)
                     whiteKingPos = zug.Zielfeld;
             }
             else
@@ -242,7 +242,7 @@ namespace Schachengine
                     Figuren[59] = new Figur(10);
                 }
                 //Bauernumwandlung
-                if ((zug.Zielfeld / 8 == 0) && (Figuren[zug.Zielfeld].Art == 7))
+                if ((zug.Zielfeld / 8 == 0) && (Figuren[zug.Zielfeld].ID == 7))
                 {
                     zobrist_key ^= Zobrist.figures[7, zug.Zielfeld];
                     zobrist_key ^= Zobrist.figures[zug.Promotion + 7, zug.Zielfeld];
@@ -252,7 +252,7 @@ namespace Schachengine
                     if (zug.Promotion == 4) Figuren[zug.Zielfeld] = new Figur(11);
                 }
                 //Update der Königsposition
-                if (Figuren[zug.Zielfeld].Art == 12)
+                if (Figuren[zug.Zielfeld].ID == 12)
                     blackKingPos = zug.Zielfeld;
             }
             UpdateKingPos();
@@ -271,7 +271,7 @@ namespace Schachengine
             {
                 case MoveType.RochadeKS:
                     // restore rook based on who moved (use saved gezogeneFigur)
-                    if (unmakeInfo.gezogeneFigur.Art == 6) // white king moved
+                    if (unmakeInfo.gezogeneFigur.ID == 6) // white king moved
                     {
                         Figuren[7] = new Figur(4);
                         Figuren[5] = new Figur(0);
@@ -283,7 +283,7 @@ namespace Schachengine
                     }
                     break;
                 case MoveType.RochadeQS:
-                    if (unmakeInfo.gezogeneFigur.Art == 6) // white king moved
+                    if (unmakeInfo.gezogeneFigur.ID == 6) // white king moved
                     {
                         Figuren[0] = new Figur(4);
                         Figuren[3] = new Figur(0);
@@ -313,9 +313,9 @@ namespace Schachengine
             Rochaderechte = unmakeInfo.rochaderechte;
             enpassant_Index = unmakeInfo.enpassantIndex;
             // restore king pos based on who moved
-            if (unmakeInfo.gezogeneFigur.Art == 6)
+            if (unmakeInfo.gezogeneFigur.ID == 6)
                 whiteKingPos = unmakeInfo.letzterZug.Startfeld;
-            else if (unmakeInfo.gezogeneFigur.Art == 12)
+            else if (unmakeInfo.gezogeneFigur.ID == 12)
                 blackKingPos = unmakeInfo.letzterZug.Startfeld;
 
             UpdateKingPos();
@@ -543,6 +543,7 @@ namespace Schachengine
         }
         public bool SquareInCheck(int Feld)
         {
+            Farbe turn = ColorToMove();
             int i, j;
             //diagonal            
             for (i = 4; i <= 7; i++)
@@ -553,7 +554,7 @@ namespace Schachengine
                     int checkFeld = Feld + j * diagonalOffsets[d];
                     Figur checkFeldFigur = Figuren[checkFeld];
 
-                    if (ColorToMove() == Figuren[checkFeld].Farbe) //Schach wird von eigener Figur abgeblockt
+                    if (turn == Figuren[checkFeld].Farbe) //Schach wird von eigener Figur abgeblockt
                         break;
 
                     if (j == 1) // direkt benachbarte Felder
@@ -566,7 +567,7 @@ namespace Schachengine
                             return true;
                     }
 
-                    if (checkFeldFigur.Art != 0)
+                    if (checkFeldFigur.ID != 0)
                     {
                         if (checkFeldFigur.Type != 3 && checkFeldFigur.Type != 5) //Schach wird abgeblockt durch gegnerische Figur
                             break;
@@ -585,7 +586,7 @@ namespace Schachengine
                     int checkFeld = Feld + j * horivertiOffsets[i];
                     Figur checkFeldFigur = Figuren[checkFeld];
 
-                    if (ColorToMove() == Figuren[checkFeld].Farbe) //Schach wird von eigener Figur abgeblockt
+                    if (turn == Figuren[checkFeld].Farbe) //Schach wird von eigener Figur abgeblockt
                         break;
 
                     if (j == 1) // direkt benachbarte Felder
@@ -593,7 +594,7 @@ namespace Schachengine
                         if (checkFeldFigur.Type == 6) // König gibt nur benachbart Schach
                             return true;
                     }
-                    if (checkFeldFigur.Art != 0)
+                    if (checkFeldFigur.ID != 0)
                     {
                         if (checkFeldFigur.Type != 4 && checkFeldFigur.Type != 5) //Schach wird abgeblockt durch gegnerische Figur
                             break;
@@ -610,14 +611,14 @@ namespace Schachengine
                 {
                     int checkFeld = Feld + 15;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
                 if (AbstandOst[Feld] >= 1)
                 {
                     int checkFeld = Feld + 17;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
             }
@@ -627,14 +628,14 @@ namespace Schachengine
                 {
                     int checkFeld = Feld + 6;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
                 if (AbstandOst[Feld] >= 2)
                 {
                     int checkFeld = Feld + 10;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
             }
@@ -644,14 +645,14 @@ namespace Schachengine
                 {
                     int checkFeld = Feld - 10;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
                 if (AbstandOst[Feld] >= 2)
                 {
                     int checkFeld = Feld - 6;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
             }
@@ -661,14 +662,14 @@ namespace Schachengine
                 {
                     int checkFeld = Feld - 17;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
                 if (AbstandOst[Feld] >= 1)
                 {
                     int checkFeld = Feld - 15;
                     Figur checkFeldFigur = Figuren[checkFeld];
-                    if (checkFeldFigur.Type == 2 && ColorToMove() != checkFeldFigur.Farbe)
+                    if (checkFeldFigur.Type == 2 && turn != checkFeldFigur.Farbe)
                         return true;
                 }
             }

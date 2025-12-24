@@ -21,9 +21,9 @@ namespace Schachengine
 
         private void button1_Click(object sender, EventArgs e)
         {
-            if (int.TryParse(textBox1.Text, out int val))
+            if (int.TryParse(textBox1.Text, out int min))
             {
-                form1.InitalizeMatch(val, radioButton1.Checked);
+                form1.InitalizeMatch(min, radioButton1.Checked);
                 
                 Close();
             } else
